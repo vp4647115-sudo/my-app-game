@@ -26,31 +26,39 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({
         {showBack ? (
           <button
             onClick={onBack}
-            className="p-1 rounded-full text-primary hover:bg-white/5 active:scale-95 transition-transform cursor-pointer"
+            className="p-1.5 rounded-lg text-[#FAF9F6] hover:bg-white/10 active:scale-95 transition-all cursor-pointer flex items-center justify-center"
             title="Go Back"
           >
-            <span className="material-symbols-outlined text-primary">arrow_back</span>
+            <span className="material-symbols-outlined text-xl">arrow_back</span>
           </button>
         ) : (
           <button
             onClick={onOpenMenu}
-            className="p-1 rounded-full text-primary hover:bg-white/5 active:scale-95 transition-transform cursor-pointer"
-            title="Menu"
+            className="p-1.5 rounded-lg text-[#FAF9F6] hover:bg-white/10 active:scale-95 transition-all cursor-pointer flex items-center justify-center"
+            title="Navigation Menu"
           >
-            <span className="material-symbols-outlined text-primary">menu</span>
+            <span className="material-symbols-outlined text-xl">menu</span>
           </button>
         )}
-        <h1 className="font-headline text-lg md:text-xl tracking-widest text-[#e3e3de] font-semibold">
-          VPN CHESS MASTER
-        </h1>
+        <button
+          onClick={showBack ? onBack : onOpenMenu}
+          className="flex items-center gap-2 hover:opacity-90 transition-opacity text-left cursor-pointer"
+        >
+          <span className="material-symbols-outlined text-[#D4AF37] text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>
+            chess
+          </span>
+          <h1 className="font-brand text-xl md:text-2xl font-bold tracking-wider text-[#FAF9F6] gold-shimmer drop-shadow-sm">
+            VPN Chess
+          </h1>
+        </button>
       </div>
 
       <div className="flex items-center gap-2 md:gap-3">
         {onOpenAuth && (
           <button
             onClick={onOpenAuth}
-            className="px-3 py-1 bg-[#D4AF37]/10 border border-[#D4AF37]/30 hover:bg-[#D4AF37]/20 text-[#D4AF37] rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
-            title="Sign In / Register"
+            className="px-3 py-1.5 bg-[#D4AF37]/10 border border-[#D4AF37]/30 hover:bg-[#D4AF37]/20 text-[#D4AF37] rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
+            title="Sign In / Manage Account"
           >
             <span className="material-symbols-outlined text-sm">lock</span>
             <span className="hidden sm:inline">Auth</span>
@@ -59,16 +67,16 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({
         {onOpenSettings && (
           <button
             onClick={onOpenSettings}
-            className="p-1 rounded-full text-[#c4c7c7] hover:text-[#FAF9F6] transition-colors cursor-pointer"
-            title="Notifications"
+            className="p-1.5 rounded-lg text-[#c4c7c7] hover:text-[#FAF9F6] hover:bg-white/10 transition-all cursor-pointer active:scale-95 flex items-center justify-center"
+            title="Settings & Audio"
           >
-            <span className="material-symbols-outlined">notifications</span>
+            <span className="material-symbols-outlined text-xl">settings</span>
           </button>
         )}
         <button
           onClick={onOpenProfile}
-          className="w-8 h-8 rounded-full overflow-hidden border border-[#D4AF37]/50 active:scale-95 transition-transform cursor-pointer"
-          title="User Profile"
+          className="w-8 h-8 rounded-full overflow-hidden border-2 border-[#D4AF37]/60 hover:border-[#D4AF37] active:scale-95 transition-all cursor-pointer shadow-md"
+          title="User Profile & Stats"
         >
           <img
             src={user.avatarUrl}

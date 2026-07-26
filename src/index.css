@@ -1,6 +1,9 @@
 @import "tailwindcss";
 
 @layer utilities {
+  .font-brand {
+    font-family: 'Cinzel', serif;
+  }
   .font-headline {
     font-family: 'Montserrat', sans-serif;
   }

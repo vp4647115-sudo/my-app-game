@@ -4,9 +4,10 @@ import { UserProfile } from '../types';
 interface HomeScreenProps {
   user: UserProfile;
   onNavigate: (screen: 'bot' | 'arena' | 'friend' | 'profile' | 'settings') => void;
+  onStartOffline: () => void;
 }
 
-export const HomeScreen: React.FC<HomeScreenProps> = ({ user, onNavigate }) => {
+export const HomeScreen: React.FC<HomeScreenProps> = ({ user, onNavigate, onStartOffline }) => {
   return (
     <div className="relative z-10 min-h-screen flex flex-col items-center justify-center pt-20 pb-28 px-6">
       {/* Premium Logo Section */}
@@ -24,8 +25,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ user, onNavigate }) => {
             </span>
           </div>
         </div>
-        <h2 className="font-headline text-3xl md:text-4xl text-[#FAF9F6] uppercase tracking-[0.2em] font-bold mb-2">
-          MASTER
+        <h2 className="font-brand text-3xl md:text-5xl text-[#FAF9F6] tracking-[0.15em] font-bold mb-2 gold-shimmer drop-shadow-md">
+          VPN CHESS
         </h2>
         <div className="h-px w-28 bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent mx-auto" />
         <p className="font-body text-xs text-[#D4AF37] mt-3 tracking-[0.3em] uppercase font-semibold">
@@ -101,7 +102,30 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ user, onNavigate }) => {
                 Play with Friend
               </span>
               <span className="block font-body text-[10px] text-[#c4c7c7]/60 uppercase tracking-wider">
-                Direct Invite
+                Direct Room Invite
+              </span>
+            </div>
+          </div>
+          <span className="material-symbols-outlined text-[#D4AF37] opacity-60 group-hover:opacity-100 transition-opacity">
+            chevron_right
+          </span>
+        </button>
+
+        {/* Play Offline / Local Pass & Play */}
+        <button
+          onClick={onStartOffline}
+          className="group relative flex items-center justify-between p-5 rounded-xl glass-panel active:scale-[0.98] hover:border-[#D4AF37]/40 transition-all duration-300 text-left"
+        >
+          <div className="flex items-center gap-4">
+            <div className="bg-[#FAF9F6]/5 p-3 rounded-lg group-hover:bg-[#FAF9F6]/10 transition-colors">
+              <span className="material-symbols-outlined text-[#D4AF37]">phonelink_setup</span>
+            </div>
+            <div>
+              <span className="block font-headline text-lg font-semibold text-[#FAF9F6]">
+                Play Offline
+              </span>
+              <span className="block font-body text-[10px] text-[#D4AF37] uppercase tracking-wider font-semibold">
+                Local Pass & Play (2 Players)
               </span>
             </div>
           </div>
@@ -125,10 +149,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ user, onNavigate }) => {
             </div>
             <div>
               <span className="block font-headline text-lg font-semibold text-[#FAF9F6]">
-                Profile
+                Profile & Statistics
               </span>
-              <span className="block font-body text-[10px] text-[#c4c7c7]/60 uppercase tracking-wider">
-                Elo: {user.elo} • {user.title}
+              <span className="block font-body text-[10px] text-[#D4AF37] uppercase tracking-wider font-semibold">
+                Player History & Account
               </span>
             </div>
           </div>

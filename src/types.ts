@@ -1,4 +1,4 @@
-export type GameMode = 'bot' | 'online' | 'friend';
+export type GameMode = 'bot' | 'online' | 'friend' | 'offline';
 
 export type AIDifficulty = 
   | 'beginner'

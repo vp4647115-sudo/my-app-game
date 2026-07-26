@@ -35,9 +35,20 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
   // Clocks in seconds
   const [playerTime, setPlayerTime] = useState<number>(config.timeControlMinutes * 60);
   const [opponentTime, setOpponentTime] = useState<number>(config.timeControlMinutes * 60);
+  const [moveDuration, setMoveDuration] = useState<number>(0);
+  const [totalMatchSeconds, setTotalMatchSeconds] = useState<number>(0);
 
   const playerColor: Color = config.playerColor;
-  const isPlayerTurn = game.turn() === playerColor;
+
+  // Active turn indicators
+  const isBottomClockActive =
+    config.mode === 'offline' ? game.turn() === 'w' : game.turn() === playerColor;
+  const isTopClockActive = !isBottomClockActive;
+
+  const isPlayerTurn =
+    config.mode === 'offline' ? true : game.turn() === playerColor;
+  const activeTurnColor: Color =
+    config.mode === 'offline' ? game.turn() : playerColor;
 
   const [turnNotice, setTurnNotice] = useState<string | null>(null);
 
@@ -132,27 +143,33 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
     if (gameOverResult) return;
 
     const interval = setInterval(() => {
-      if (isPlayerTurn) {
-        setPlayerTime((t) => {
-          if (t <= 1) {
-            handleGameOver('LOSS', 'Time expired');
-            return 0;
-          }
-          return t - 1;
-        });
+      const turn = game.turn();
+      const isBottomTurn =
+        config.mode === 'offline' ? turn === 'w' : turn === playerColor;
+
+      if (isBottomTurn) {
+        setPlayerTime((t) => Math.max(0, t - 1));
       } else {
-        setOpponentTime((t) => {
-          if (t <= 1) {
-            handleGameOver('WIN', 'Opponent time expired');
-            return 0;
-          }
-          return t - 1;
-        });
+        setOpponentTime((t) => Math.max(0, t - 1));
       }
+
+      setMoveDuration((s) => s + 1);
+      setTotalMatchSeconds((s) => s + 1);
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isPlayerTurn, gameOverResult, handleGameOver]);
+  }, [game, config.mode, playerColor, gameOverResult]);
+
+  // Handle Timeout Game Over
+  useEffect(() => {
+    if (gameOverResult) return;
+
+    if (playerTime <= 0) {
+      handleGameOver('LOSS', 'Time expired');
+    } else if (opponentTime <= 0) {
+      handleGameOver('WIN', 'Opponent time expired');
+    }
+  }, [playerTime, opponentTime, gameOverResult, handleGameOver]);
 
   // AI Bot Turn Execution
   useEffect(() => {
@@ -173,6 +190,7 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
             setGame(copy);
             setLastMove({ from: moveRes.from, to: moveRes.to });
             setMoveHistory(copy.history());
+            setMoveDuration(0);
 
             if (moveRes.captured) playSnd('capture');
             else playSnd('move');
@@ -199,8 +217,8 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
 
     const piece = game.get(square);
 
-    // If square has player's piece, select it
-    if (piece && piece.color === playerColor) {
+    // If square has active player's piece, select it
+    if (piece && piece.color === activeTurnColor) {
       setSelectedSquare(square);
       const moves = game.moves({ square, verbose: true });
       setValidMoves(moves.map((m) => m.to));
@@ -223,6 +241,7 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
           setMoveHistory(copy.history());
           setSelectedSquare(null);
           setValidMoves([]);
+          setMoveDuration(0);
 
           if (moveRes.captured) playSnd('capture');
           else playSnd('move');
@@ -311,8 +330,10 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
         </button>
 
         <div className="flex items-center gap-2">
-          <span className="bg-[#FAF9F6]/5 px-3 py-1 rounded-full border border-white/10 font-body text-[10px] text-[#D4AF37] font-bold uppercase">
-            {config.timeControlMinutes}m Blitz • {config.rated ? 'Rated' : 'Casual'}
+          <span className="bg-[#FAF9F6]/5 px-3 py-1 rounded-full border border-white/10 font-body text-[10px] text-[#D4AF37] font-bold uppercase flex items-center gap-2">
+            <span>{config.timeControlMinutes}m Blitz • {config.rated ? 'Rated' : 'Casual'}</span>
+            <span className="text-white/40">•</span>
+            <span className="text-[#FAF9F6] font-mono">Match: {formatTime(totalMatchSeconds)}</span>
           </span>
         </div>
       </div>
@@ -347,22 +368,38 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
                 Thinking move...
               </span>
             ) : (
-              <span className="font-body text-[10px] text-[#c4c7c7]/60">
-                {!isPlayerTurn ? "Opponent's turn" : 'Waiting...'}
+              <span className="font-body text-[10px] text-[#c4c7c7]/80 flex items-center gap-1 font-semibold">
+                {config.mode === 'offline'
+                  ? game.turn() === 'b'
+                    ? "Black's Turn (Active Clock)"
+                    : "White's Turn"
+                  : isTopClockActive
+                  ? "Opponent's turn to move"
+                  : 'Waiting...'}
               </span>
             )}
           </div>
         </div>
 
         {/* Opponent Clock */}
-        <div
-          className={`px-4 py-2 rounded-lg font-headline text-lg font-bold tracking-wider transition-all ${
-            !isPlayerTurn
-              ? 'bg-[#FAF9F6] text-[#121411] shadow-lg scale-105'
-              : 'bg-[#1a1a1a] text-[#c4c7c7]'
-          }`}
-        >
-          {formatTime(opponentTime)}
+        <div className="flex flex-col items-end gap-0.5">
+          <div
+            className={`px-4 py-2 rounded-lg font-headline text-lg font-bold tracking-wider transition-all flex items-center gap-2 ${
+              isTopClockActive
+                ? 'bg-[#FAF9F6] text-[#121411] shadow-xl scale-105 ring-2 ring-[#D4AF37]'
+                : 'bg-[#1a1a1a] text-[#c4c7c7]'
+            }`}
+          >
+            {isTopClockActive && (
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+            )}
+            <span>{formatTime(opponentTime)}</span>
+          </div>
+          {isTopClockActive && (
+            <span className="text-[10px] text-[#D4AF37] font-bold font-mono">
+              {moveDuration}s move time
+            </span>
+          )}
         </div>
       </div>
 
@@ -463,21 +500,37 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
                 {user.elo}
               </span>
             </div>
-            <span className="font-body text-[10px] text-[#c4c7c7]/60">
-              {isPlayerTurn ? 'Your turn to move' : 'Waiting for opponent...'}
+            <span className="font-body text-[10px] text-[#c4c7c7]/80 flex items-center gap-1 font-semibold">
+              {config.mode === 'offline'
+                ? game.turn() === 'w'
+                  ? "White's Turn (Active Clock)"
+                  : "Black's Turn"
+                : isBottomClockActive
+                ? 'Your turn to move'
+                : 'Waiting for opponent...'}
             </span>
           </div>
         </div>
 
         {/* Player Clock */}
-        <div
-          className={`px-4 py-2 rounded-lg font-headline text-lg font-bold tracking-wider transition-all ${
-            isPlayerTurn
-              ? 'bg-[#FAF9F6] text-[#121411] shadow-lg scale-105'
-              : 'bg-[#1a1a1a] text-[#c4c7c7]'
-          }`}
-        >
-          {formatTime(playerTime)}
+        <div className="flex flex-col items-end gap-0.5">
+          <div
+            className={`px-4 py-2 rounded-lg font-headline text-lg font-bold tracking-wider transition-all flex items-center gap-2 ${
+              isBottomClockActive
+                ? 'bg-[#FAF9F6] text-[#121411] shadow-xl scale-105 ring-2 ring-[#D4AF37]'
+                : 'bg-[#1a1a1a] text-[#c4c7c7]'
+            }`}
+          >
+            {isBottomClockActive && (
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+            )}
+            <span>{formatTime(playerTime)}</span>
+          </div>
+          {isBottomClockActive && (
+            <span className="text-[10px] text-[#D4AF37] font-bold font-mono">
+              {moveDuration}s move time
+            </span>
+          )}
         </div>
       </div>
 

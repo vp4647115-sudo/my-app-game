@@ -4,6 +4,7 @@ import { AIDifficulty, PlayerColor, ActiveMatchConfig } from '../types';
 interface BotSelectScreenProps {
   onStartMatch: (config: ActiveMatchConfig) => void;
   onBack: () => void;
+  onOpenSettings?: () => void;
 }
 
 interface DifficultyOption {
@@ -69,7 +70,7 @@ const DIFFICULTIES: DifficultyOption[] = [
   },
 ];
 
-export const BotSelectScreen: React.FC<BotSelectScreenProps> = ({ onStartMatch, onBack }) => {
+export const BotSelectScreen: React.FC<BotSelectScreenProps> = ({ onStartMatch, onBack, onOpenSettings }) => {
   const [selectedSide, setSelectedSide] = useState<PlayerColor>('white');
   const [selectedDiff, setSelectedDiff] = useState<AIDifficulty>('beginner');
 
@@ -264,7 +265,10 @@ export const BotSelectScreen: React.FC<BotSelectScreenProps> = ({ onStartMatch, 
           <span>COMMENCE MATCH</span>
           <span className="material-symbols-outlined">play_arrow</span>
         </button>
-        <button className="font-body text-[10px] text-[#c4c7c7] hover:text-[#D4AF37] transition-colors uppercase tracking-[0.3em]">
+        <button
+          onClick={onOpenSettings || onBack}
+          className="font-body text-[10px] text-[#c4c7c7] hover:text-[#D4AF37] transition-colors uppercase tracking-[0.3em] cursor-pointer"
+        >
           Configure Engine Settings
         </button>
       </div>
