@@ -1,0 +1,6 @@
+{
+  "name": "VPN Chess Master",
+  "description": "An elite dark-themed chess platform featuring AI Bot matches with custom difficulty tiers, online proxy matchmaking, private sanctum friend rooms, full user authentication and database management, sound synthesis, and rich statistical profile tracking.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
