@@ -22,11 +22,14 @@ import { FriendScreen } from './components/FriendScreen';
 import { ProfileScreen } from './components/ProfileScreen';
 import { SettingsScreen } from './components/SettingsScreen';
 import { ChessBoardGame } from './components/ChessBoardGame';
+import { LearnAcademyScreen } from './components/LearnAcademyScreen';
 
 import { EditProfileModal } from './components/EditProfileModal';
 import { AuthModal } from './components/AuthModal';
 import { LoginLandingScreen } from './components/LoginLandingScreen';
 import { NavDrawer } from './components/NavDrawer';
+import { ApkInstallModal } from './components/ApkInstallModal';
+import { ErpAuthModal, ErpUserSession } from './components/ErpAuthModal';
 
 export default function App() {
   const [user, setUser] = useState<UserProfile>(() => loadUserProfile());
@@ -102,7 +105,7 @@ export default function App() {
 
   // Navigation State
   const [currentScreen, setCurrentScreen] = useState<
-    'home' | 'bot' | 'arena' | 'friend' | 'profile' | 'settings' | 'game'
+    'home' | 'bot' | 'arena' | 'friend' | 'profile' | 'settings' | 'game' | 'learn'
   >('home');
   const [activeTab, setActiveTab] = useState<TabType>('home');
 
@@ -112,20 +115,24 @@ export default function App() {
   // Modals & Navigation Drawer
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [isErpAuthOpen, setIsErpAuthOpen] = useState(false);
   const [isNavDrawerOpen, setIsNavDrawerOpen] = useState(false);
+  const [isApkInstallOpen, setIsApkInstallOpen] = useState(false);
 
   // Synchronize Tab with Screen
   const handleSelectTab = (tab: TabType) => {
     setActiveTab(tab);
     if (tab === 'home') setCurrentScreen('home');
+    else if (tab === 'learn') setCurrentScreen('learn');
     else if (tab === 'profile') setCurrentScreen('profile');
     else if (tab === 'settings') setCurrentScreen('settings');
   };
 
   // Screen navigation helper
-  const handleNavigate = (screen: 'home' | 'bot' | 'arena' | 'friend' | 'profile' | 'settings') => {
+  const handleNavigate = (screen: 'home' | 'bot' | 'arena' | 'friend' | 'profile' | 'settings' | 'learn') => {
     setCurrentScreen(screen);
     if (screen === 'home') setActiveTab('home');
+    else if (screen === 'learn') setActiveTab('learn');
     else if (screen === 'profile') setActiveTab('profile');
     else if (screen === 'settings') setActiveTab('settings');
   };
@@ -239,7 +246,9 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#121411] text-[#e3e3de] font-body relative overflow-x-hidden">
       {/* 3D Background Canvas (shown on Home, Arena, Bot screens) */}
-      {currentScreen !== 'game' && <ThreeChessBackground />}
+      {currentScreen !== 'game' && (
+        <ThreeChessBackground lowPerformanceMode={settings.lowPerformanceMode} />
+      )}
 
       {/* Top Header Navigation (Hidden during active match) */}
       {currentScreen !== 'game' && (
@@ -261,6 +270,15 @@ export default function App() {
             user={user}
             onNavigate={handleNavigate}
             onStartOffline={handleStartOfflineMatch}
+          />
+        )}
+
+        {currentScreen === 'learn' && (
+          <LearnAcademyScreen
+            user={user}
+            settings={settings}
+            onBack={() => setCurrentScreen('home')}
+            onStartMatch={handleStartMatch}
           />
         )}
 
@@ -293,6 +311,7 @@ export default function App() {
             user={user}
             matchHistory={matchHistory}
             onOpenEditModal={() => setIsEditProfileOpen(true)}
+            onUpdateProfile={handleSaveProfile}
             onBack={currentScreen === 'profile' && activeTab === 'home' ? () => setCurrentScreen('home') : undefined}
           />
         )}
@@ -303,6 +322,7 @@ export default function App() {
             settings={settings}
             onUpdateSettings={handleUpdateSettings}
             onOpenEditProfile={() => setIsEditProfileOpen(true)}
+            onOpenApkInstall={() => setIsApkInstallOpen(true)}
             onSignOut={handleSignOut}
             onBack={currentScreen === 'settings' && activeTab === 'home' ? () => setCurrentScreen('home') : undefined}
           />
@@ -332,7 +352,28 @@ export default function App() {
         onNavigate={handleNavigate}
         onStartOffline={handleStartOfflineMatch}
         onOpenAuth={() => setIsAuthOpen(true)}
+        onOpenErpAuth={() => setIsErpAuthOpen(true)}
+        onOpenApkInstall={() => setIsApkInstallOpen(true)}
         onSignOut={handleSignOut}
+      />
+
+      <ApkInstallModal
+        isOpen={isApkInstallOpen}
+        onClose={() => setIsApkInstallOpen(false)}
+      />
+
+      <ErpAuthModal
+        isOpen={isErpAuthOpen}
+        onClose={() => setIsErpAuthOpen(false)}
+        onLoginComplete={(session: ErpUserSession) => {
+          const updated = {
+            ...user,
+            username: session.name,
+            jwtActive: true,
+          };
+          setUser(updated);
+          saveUserProfile(updated);
+        }}
       />
 
       {isEditProfileOpen && (

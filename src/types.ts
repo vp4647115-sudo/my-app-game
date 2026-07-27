@@ -1,4 +1,4 @@
-export type GameMode = 'bot' | 'online' | 'friend' | 'offline';
+export type GameMode = 'bot' | 'online' | 'friend' | 'offline' | 'learn';
 
 export type AIDifficulty = 
   | 'beginner'
@@ -33,7 +33,9 @@ export interface GameSettings {
   volume: number; // 0 to 100
   reducedMotion: boolean;
   highContrast: boolean;
-  boardTheme: 'walnut' | 'marble' | 'classic';
+  lowPerformanceMode?: boolean; // Battery saver / Smooth FPS on low-end mobile
+  boardTheme: 'walnut' | 'emerald' | 'obsidian' | 'royal' | 'marble';
+  pieceStyle: 'neo-grandmaster' | 'classic-staunton' | '3d-metallic' | 'minimalist';
 }
 
 export interface MatchHistoryItem {
@@ -69,3 +71,26 @@ export interface RoomConfig {
   boardTheme: string;
   createdAt: number;
 }
+
+export interface GeminiCoachResponse {
+  evaluation: string;
+  keyConcept: string;
+  coachingAdvice: string;
+  recommendedMoves: {
+    san: string;
+    from: string;
+    to: string;
+    explanation: string;
+  }[];
+}
+
+export interface GeminiPuzzleChallenge {
+  title: string;
+  fen: string;
+  playerColor: 'w' | 'b';
+  goal: string;
+  solutionSan: string[];
+  explanation: string;
+  difficulty: string;
+}
+

@@ -57,11 +57,11 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({
         {onOpenAuth && (
           <button
             onClick={onOpenAuth}
-            className="px-3 py-1.5 bg-[#D4AF37]/10 border border-[#D4AF37]/30 hover:bg-[#D4AF37]/20 text-[#D4AF37] rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
-            title="Sign In / Manage Account"
+            className="px-3.5 py-1.5 bg-[#D4AF37] hover:bg-[#b8972e] text-[#121411] rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer shadow-md active:scale-95"
+            title="Sign In / Login to Account"
           >
-            <span className="material-symbols-outlined text-sm">lock</span>
-            <span className="hidden sm:inline">Auth</span>
+            <span className="material-symbols-outlined text-sm font-bold">login</span>
+            <span>LOGIN</span>
           </button>
         )}
         {onOpenSettings && (

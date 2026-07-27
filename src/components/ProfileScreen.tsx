@@ -5,6 +5,7 @@ interface ProfileScreenProps {
   user: UserProfile;
   matchHistory: MatchHistoryItem[];
   onOpenEditModal: () => void;
+  onUpdateProfile?: (updated: UserProfile) => void;
   onBack?: () => void;
 }
 
@@ -12,9 +13,26 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   user,
   matchHistory,
   onOpenEditModal,
+  onUpdateProfile,
   onBack,
 }) => {
   const [filterResult, setFilterResult] = useState<'ALL' | 'WIN' | 'LOSS' | 'DRAW'>('ALL');
+
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && onUpdateProfile) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          onUpdateProfile({
+            ...user,
+            avatarUrl: reader.result,
+          });
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const filteredHistory = matchHistory.filter((item) => {
     if (filterResult === 'ALL') return true;
@@ -46,13 +64,29 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       <section className="glass-panel rounded-xl p-6 md:p-8 flex flex-col md:flex-row items-center gap-6 relative overflow-hidden shadow-lg border border-white/10">
         <div className="absolute -top-12 -right-12 w-48 h-48 bg-[#D4AF37]/5 rounded-full blur-3xl pointer-events-none" />
 
-        {/* Avatar with GM badge */}
-        <div className="relative shrink-0">
-          <div className="w-24 h-24 md:w-28 md:h-28 rounded-full border-2 border-[#FAF9F6]/20 p-1">
+        {/* Avatar with GM badge and Upload Button */}
+        <div className="relative shrink-0 group">
+          <div className="w-24 h-24 md:w-28 md:h-28 rounded-full border-2 border-[#FAF9F6]/20 p-1 relative overflow-hidden bg-[#1e201d]">
             <img
               src={user.avatarUrl}
               alt={user.username}
               className="w-full h-full object-cover rounded-full"
+            />
+            {/* Hover Camera Overlay / Upload Button */}
+            <label
+              htmlFor="profile-avatar-input"
+              className="absolute inset-0 bg-black/60 rounded-full flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-all cursor-pointer backdrop-blur-[2px]"
+              title="Upload New Profile Picture"
+            >
+              <span className="material-symbols-outlined text-2xl text-[#D4AF37]">photo_camera</span>
+              <span className="font-body text-[9px] font-bold uppercase tracking-wider mt-0.5 text-[#FAF9F6]">Upload</span>
+            </label>
+            <input
+              id="profile-avatar-input"
+              type="file"
+              accept="image/*"
+              onChange={handleAvatarUpload}
+              className="hidden"
             />
           </div>
           <div className="absolute bottom-0 right-0 bg-[#D4AF37] text-[#121411] px-2.5 py-0.5 rounded-full font-body text-[10px] font-bold shadow">
@@ -82,12 +116,30 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             {user.bio}
           </p>
 
-          <button
-            onClick={onOpenEditModal}
-            className="mt-4 px-4 py-1.5 rounded-lg border border-[#D4AF37]/50 text-[#D4AF37] hover:bg-[#D4AF37]/10 font-body text-xs font-bold transition-all cursor-pointer"
-          >
-            EDIT PROFILE
-          </button>
+          <div className="mt-4 flex flex-wrap items-center justify-center md:justify-start gap-2.5">
+            <label
+              htmlFor="profile-avatar-input-btn"
+              className="px-3.5 py-1.5 bg-[#D4AF37]/10 hover:bg-[#D4AF37]/20 border border-[#D4AF37]/50 text-[#D4AF37] rounded-lg font-body text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
+            >
+              <span className="material-symbols-outlined text-sm">upload</span>
+              <span>UPLOAD PHOTO</span>
+              <input
+                id="profile-avatar-input-btn"
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarUpload}
+                className="hidden"
+              />
+            </label>
+
+            <button
+              onClick={onOpenEditModal}
+              className="px-3.5 py-1.5 rounded-lg border border-white/20 text-[#FAF9F6] hover:bg-white/10 font-body text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
+            >
+              <span className="material-symbols-outlined text-sm">edit</span>
+              <span>EDIT PROFILE</span>
+            </button>
+          </div>
         </div>
 
         {/* ELO Rating Card */}

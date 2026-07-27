@@ -1,9 +1,14 @@
 import React, { useEffect, useRef } from 'react';
 
-export const ThreeChessBackground: React.FC = () => {
+interface ThreeChessBackgroundProps {
+  lowPerformanceMode?: boolean;
+}
+
+export const ThreeChessBackground: React.FC<ThreeChessBackgroundProps> = ({ lowPerformanceMode }) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (lowPerformanceMode) return;
     const container = containerRef.current;
     if (!container) return;
 
@@ -39,11 +44,15 @@ export const ThreeChessBackground: React.FC = () => {
 
       const scene = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
-      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-      renderer.setSize(width, height);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-
-      container.appendChild(renderer.domElement);
+      try {
+        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(width, height);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        container.appendChild(renderer.domElement);
+      } catch (err) {
+        // Fallback gracefully if WebGL context is unavailable or restricted
+        return;
+      }
 
       // Lights
       const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
@@ -148,7 +157,9 @@ export const ThreeChessBackground: React.FC = () => {
         renderer.domElement.remove();
       }
     };
-  }, []);
+  }, [lowPerformanceMode]);
+
+  if (lowPerformanceMode) return null;
 
   return (
     <div className="fixed inset-0 z-0 pointer-events-none opacity-50 overflow-hidden">

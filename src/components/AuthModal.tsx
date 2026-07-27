@@ -1,5 +1,10 @@
 import React, { useState } from 'react';
-import { isSupabaseConfigured, supabase } from '../services/supabaseClient';
+import {
+  getSupabase,
+  getSupabaseCredentials,
+  saveSupabaseCredentials,
+  isSupabaseReady,
+} from '../services/supabaseClient';
 
 interface AuthModalProps {
   currentEmail?: string;
@@ -22,14 +27,43 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [infoMsg, setInfoMsg] = useState<string | null>(null);
 
+  // Supabase Config State
+  const initialCreds = getSupabaseCredentials();
+  const [showKeyConfig, setShowKeyConfig] = useState(!isSupabaseReady());
+  const [customUrl, setCustomUrl] = useState(initialCreds.url);
+  const [customKey, setCustomKey] = useState(initialCreds.key);
+  const [keySaveSuccess, setKeySaveSuccess] = useState(false);
+
+  const handleSaveKeys = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!customUrl.trim() || !customKey.trim()) {
+      setErrorMsg('Please enter both Supabase URL and Anon Key.');
+      return;
+    }
+    const client = saveSupabaseCredentials(customUrl, customKey);
+    if (client) {
+      setKeySaveSuccess(true);
+      setErrorMsg(null);
+      setInfoMsg('Supabase API keys saved and connected successfully!');
+      setTimeout(() => {
+        setKeySaveSuccess(false);
+        setShowKeyConfig(false);
+      }, 1500);
+    } else {
+      setErrorMsg('Failed to initialize Supabase client with provided keys.');
+    }
+  };
+
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
     setErrorMsg(null);
     setInfoMsg(null);
 
+    const client = getSupabase();
+
     try {
-      if (isSupabaseConfigured && supabase) {
-        const { error } = await supabase.auth.signInWithOAuth({
+      if (client) {
+        const { error } = await client.auth.signInWithOAuth({
           provider: 'google',
           options: {
             redirectTo: window.location.origin,
@@ -37,7 +71,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         });
         if (error) throw error;
       } else {
-        // Simulated Google login if Supabase keys aren't configured yet
+        // Instant Google login fallback if Supabase keys aren't added yet
         setInfoMsg('Connecting via Google Auth...');
         setTimeout(() => {
           const simEmail = 'grandmaster.google@gmail.com';
@@ -47,7 +81,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         }, 800);
       }
     } catch (err: any) {
-      setErrorMsg(err.message || 'Google Auth failed. Please check Supabase configuration.');
+      setErrorMsg(err.message || 'Google Auth failed. Please check Supabase key configuration.');
     } finally {
       setGoogleLoading(false);
     }
@@ -61,37 +95,42 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setErrorMsg(null);
     setInfoMsg(null);
 
+    const client = getSupabase();
+
     try {
-      if (isSupabaseConfigured && supabase) {
+      if (client) {
         if (isSignUp) {
-          const { data, error } = await supabase.auth.signUp({ email, password });
+          const { data, error } = await client.auth.signUp({ email, password });
           if (error) throw error;
           if (data?.user && !data.session) {
-            setInfoMsg('Account created! Please check your email to confirm registration.');
+            setInfoMsg('Account created! Please check your email to confirm registration or sign in.');
             setLoading(false);
             return;
           }
         } else {
-          const { error } = await supabase.auth.signInWithPassword({ email, password });
+          const { error } = await client.auth.signInWithPassword({ email, password });
           if (error) throw error;
         }
       }
       onSuccess(email);
       onClose();
     } catch (err: any) {
-      setErrorMsg(err.message || 'Authentication failed. Please check credentials.');
+      setErrorMsg(err.message || 'Authentication failed. Please verify credentials or Supabase key.');
     } finally {
       setLoading(false);
     }
   };
 
   const handleLogout = async () => {
-    if (isSupabaseConfigured && supabase) {
-      await supabase.auth.signOut();
+    const client = getSupabase();
+    if (client) {
+      await client.auth.signOut();
     }
     if (onSignOut) onSignOut();
     onClose();
   };
+
+  const isConnected = isSupabaseReady();
 
   return (
     <div className="fixed inset-0 z-50 bg-[#121411]/85 backdrop-blur-md flex items-center justify-center p-6 animate-fade-in">
@@ -112,13 +151,64 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </button>
         </div>
 
-        {/* Supabase Status Banner */}
-        <div className="flex items-center justify-between bg-[#121411]/60 px-3 py-1.5 rounded-lg border border-white/5 text-[11px]">
-          <span className="text-[#c4c7c7] font-body flex items-center gap-1.5">
-            <span className={`w-2 h-2 rounded-full ${isSupabaseConfigured ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
-            <span>Supabase Auth: {isSupabaseConfigured ? 'Connected' : 'Active (Local Sync)'}</span>
-          </span>
-          <span className="text-[#D4AF37] font-mono text-[10px] font-bold">v2.0</span>
+        {/* Supabase Status & Key Setup Toggle */}
+        <div className="bg-[#121411]/60 p-3 rounded-xl border border-white/10 text-[11px] space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[#c4c7c7] font-body flex items-center gap-2">
+              <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+              <span>Supabase Auth: {isConnected ? 'Connected & Active' : 'Key Required'}</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowKeyConfig(!showKeyConfig)}
+              className="text-[#D4AF37] hover:underline font-bold text-[10px] cursor-pointer flex items-center gap-1"
+            >
+              <span className="material-symbols-outlined text-xs">key</span>
+              <span>{showKeyConfig ? 'Hide Key Setup' : 'Configure Supabase Key'}</span>
+            </button>
+          </div>
+
+          {/* Config Keys Panel */}
+          {showKeyConfig && (
+            <form onSubmit={handleSaveKeys} className="pt-2 border-t border-white/10 space-y-2.5 text-left">
+              <p className="text-[10px] text-[#c4c7c7]/80">
+                Enter your Supabase Project URL and Anon API key to connect live authentication & database persistence:
+              </p>
+              <div>
+                <label className="block text-[9px] font-bold text-[#D4AF37] uppercase tracking-wider mb-1">
+                  Supabase Project URL
+                </label>
+                <input
+                  type="url"
+                  required
+                  value={customUrl}
+                  onChange={(e) => setCustomUrl(e.target.value)}
+                  placeholder="https://xyzproject.supabase.co"
+                  className="w-full bg-[#1e201d] border border-white/15 rounded-lg px-3 py-1.5 font-mono text-xs text-[#FAF9F6] focus:outline-none focus:border-[#D4AF37]"
+                />
+              </div>
+              <div>
+                <label className="block text-[9px] font-bold text-[#D4AF37] uppercase tracking-wider mb-1">
+                  Supabase Anon Key
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={customKey}
+                  onChange={(e) => setCustomKey(e.target.value)}
+                  placeholder="eyJhbGciOiJIUzI1NiIsInR..."
+                  className="w-full bg-[#1e201d] border border-white/15 rounded-lg px-3 py-1.5 font-mono text-xs text-[#FAF9F6] focus:outline-none focus:border-[#D4AF37]"
+                />
+              </div>
+              <button
+                type="submit"
+                className="w-full py-2 bg-[#D4AF37] text-[#121411] hover:bg-[#b5952f] rounded-lg font-body text-xs font-bold uppercase tracking-wider transition-all cursor-pointer shadow active:scale-95 flex items-center justify-center gap-1.5"
+              >
+                <span className="material-symbols-outlined text-sm">save</span>
+                <span>{keySaveSuccess ? 'KEYS CONNECTED!' : 'SAVE & INITIALIZE SUPABASE'}</span>
+              </button>
+            </form>
+          )}
         </div>
 
         {errorMsg && (

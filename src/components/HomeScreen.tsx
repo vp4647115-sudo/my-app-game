@@ -1,17 +1,48 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
+import { createTimeline, stagger } from 'animejs';
 import { UserProfile } from '../types';
 
 interface HomeScreenProps {
   user: UserProfile;
-  onNavigate: (screen: 'bot' | 'arena' | 'friend' | 'profile' | 'settings') => void;
+  onNavigate: (screen: 'bot' | 'arena' | 'friend' | 'profile' | 'settings' | 'learn') => void;
   onStartOffline: () => void;
 }
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({ user, onNavigate, onStartOffline }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    // Anime.js entrance timeline v4
+    const tl = createTimeline({
+      defaults: { ease: 'outExpo' },
+    });
+
+    tl.add(
+      '.anime-logo',
+      {
+        translateY: [-30, 0],
+        opacity: [0, 1],
+        scale: [0.9, 1],
+        duration: 900,
+      }
+    ).add(
+      '.anime-card',
+      {
+        translateY: [25, 0],
+        opacity: [0, 1],
+        delay: stagger(120),
+        duration: 700,
+      },
+      '-=500'
+    );
+  }, []);
+
   return (
-    <div className="relative z-10 min-h-screen flex flex-col items-center justify-center pt-20 pb-28 px-6">
+    <div ref={containerRef} className="relative z-10 min-h-screen flex flex-col items-center justify-center pt-20 pb-28 px-6">
       {/* Premium Logo Section */}
-      <div className="mb-12 text-center animate-fade-in">
+      <div className="mb-12 text-center anime-logo opacity-0">
         <div className="relative inline-block mb-4">
           <span
             className="material-symbols-outlined text-[80px] text-[#FAF9F6] drop-shadow-[0_0_18px_rgba(212,175,55,0.35)]"
@@ -36,10 +67,38 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ user, onNavigate, onStar
 
       {/* Action Grid */}
       <div className="w-full max-w-sm grid grid-cols-1 gap-4">
+        {/* Chess Master Academy Learning Option */}
+        <button
+          onClick={() => onNavigate('learn')}
+          className="anime-card opacity-0 group relative flex items-center justify-between p-5 rounded-xl bg-gradient-to-r from-[#D4AF37]/20 via-[#181a17] to-[#121411] border border-[#D4AF37]/60 shadow-lg active:scale-[0.98] hover:border-[#D4AF37] transition-all duration-300 text-left cursor-pointer"
+        >
+          <div className="flex items-center gap-4">
+            <div className="bg-[#D4AF37]/20 p-3 rounded-lg text-[#D4AF37] group-hover:bg-[#D4AF37]/30 transition-colors">
+              <span className="material-symbols-outlined text-[#D4AF37]">psychology</span>
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-headline text-lg font-bold text-[#FAF9F6]">
+                  Chess Master Academy
+                </span>
+                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-[#D4AF37] text-[#121411]">
+                  AI Coach
+                </span>
+              </div>
+              <span className="block font-body text-[10px] text-[#D4AF37] font-bold uppercase tracking-wider">
+                Learn Tactics, Puzzles & Q&A
+              </span>
+            </div>
+          </div>
+          <span className="material-symbols-outlined text-[#D4AF37] group-hover:translate-x-1 transition-transform">
+            arrow_forward
+          </span>
+        </button>
+
         {/* Play vs Bot */}
         <button
           onClick={() => onNavigate('bot')}
-          className="group relative flex items-center justify-between p-5 rounded-xl glass-panel active:scale-[0.98] hover:border-[#D4AF37]/40 transition-all duration-300 text-left"
+          className="anime-card opacity-0 group relative flex items-center justify-between p-5 rounded-xl glass-panel active:scale-[0.98] hover:border-[#D4AF37]/40 transition-all duration-300 text-left cursor-pointer"
         >
           <div className="flex items-center gap-4">
             <div className="bg-[#FAF9F6]/5 p-3 rounded-lg group-hover:bg-[#FAF9F6]/10 transition-colors">
@@ -59,39 +118,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ user, onNavigate, onStar
           </span>
         </button>
 
-        {/* Play Online */}
-        <button
-          onClick={() => onNavigate('arena')}
-          className="group relative flex items-center justify-between p-5 rounded-xl glass-panel active:scale-[0.98] hover:border-[#D4AF37]/40 transition-all duration-300 overflow-hidden text-left"
-        >
-          <div className="absolute inset-0 bg-gradient-to-r from-[#D4AF37]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-          <div className="flex items-center gap-4 relative z-10">
-            <div className="bg-[#FAF9F6]/5 p-3 rounded-lg group-hover:bg-[#FAF9F6]/10 transition-colors">
-              <span
-                className="material-symbols-outlined text-[#FAF9F6]"
-                style={{ fontVariationSettings: "'FILL' 1" }}
-              >
-                public
-              </span>
-            </div>
-            <div>
-              <span className="block font-headline text-lg font-semibold text-[#FAF9F6]">
-                Play Online
-              </span>
-              <span className="block font-body text-[10px] text-[#D4AF37] uppercase tracking-wider font-medium">
-                Secure Global Proxy
-              </span>
-            </div>
-          </div>
-          <span className="material-symbols-outlined text-[#D4AF37] opacity-60 group-hover:opacity-100 transition-opacity relative z-10">
-            chevron_right
-          </span>
-        </button>
-
         {/* Play with Friend */}
         <button
           onClick={() => onNavigate('friend')}
-          className="group relative flex items-center justify-between p-5 rounded-xl glass-panel active:scale-[0.98] hover:border-[#D4AF37]/40 transition-all duration-300 text-left"
+          className="anime-card opacity-0 group relative flex items-center justify-between p-5 rounded-xl glass-panel active:scale-[0.98] hover:border-[#D4AF37]/40 transition-all duration-300 text-left cursor-pointer"
         >
           <div className="flex items-center gap-4">
             <div className="bg-[#FAF9F6]/5 p-3 rounded-lg group-hover:bg-[#FAF9F6]/10 transition-colors">
@@ -114,7 +144,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ user, onNavigate, onStar
         {/* Play Offline / Local Pass & Play */}
         <button
           onClick={onStartOffline}
-          className="group relative flex items-center justify-between p-5 rounded-xl glass-panel active:scale-[0.98] hover:border-[#D4AF37]/40 transition-all duration-300 text-left"
+          className="anime-card opacity-0 group relative flex items-center justify-between p-5 rounded-xl glass-panel active:scale-[0.98] hover:border-[#D4AF37]/40 transition-all duration-300 text-left cursor-pointer"
         >
           <div className="flex items-center gap-4">
             <div className="bg-[#FAF9F6]/5 p-3 rounded-lg group-hover:bg-[#FAF9F6]/10 transition-colors">
@@ -137,7 +167,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ user, onNavigate, onStar
         {/* Profile */}
         <button
           onClick={() => onNavigate('profile')}
-          className="group relative flex items-center justify-between p-5 rounded-xl glass-panel active:scale-[0.98] hover:border-[#D4AF37]/40 transition-all duration-300 text-left"
+          className="anime-card opacity-0 group relative flex items-center justify-between p-5 rounded-xl glass-panel active:scale-[0.98] hover:border-[#D4AF37]/40 transition-all duration-300 text-left cursor-pointer"
         >
           <div className="flex items-center gap-4">
             <div className="w-10 h-10 rounded-lg overflow-hidden border border-[#D4AF37]/30">

@@ -1,5 +1,11 @@
 import React, { useState } from 'react';
-import { isSupabaseConfigured, supabase } from '../services/supabaseClient';
+import {
+  getSupabase,
+  getSupabaseCredentials,
+  saveSupabaseCredentials,
+  isSupabaseReady,
+} from '../services/supabaseClient';
+import { ErpAuthModal, ErpUserSession } from './ErpAuthModal';
 
 interface LoginLandingScreenProps {
   onLoginSuccess: (email: string, name?: string, avatarUrl?: string) => void;
@@ -19,14 +25,46 @@ export const LoginLandingScreen: React.FC<LoginLandingScreenProps> = ({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [infoMsg, setInfoMsg] = useState<string | null>(null);
 
+  // ERP Auth Modal State
+  const [isErpModalOpen, setIsErpModalOpen] = useState(false);
+
+  // Supabase Config State
+  const initialCreds = getSupabaseCredentials();
+  const [showKeyConfig, setShowKeyConfig] = useState(false);
+  const [customUrl, setCustomUrl] = useState(initialCreds.url);
+  const [customKey, setCustomKey] = useState(initialCreds.key);
+  const [keySaveSuccess, setKeySaveSuccess] = useState(false);
+
+  const handleSaveKeys = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!customUrl.trim() || !customKey.trim()) {
+      setErrorMsg('Please enter both Supabase URL and Anon Key.');
+      return;
+    }
+    const client = saveSupabaseCredentials(customUrl, customKey);
+    if (client) {
+      setKeySaveSuccess(true);
+      setErrorMsg(null);
+      setInfoMsg('Supabase API keys saved and connected successfully!');
+      setTimeout(() => {
+        setKeySaveSuccess(false);
+        setShowKeyConfig(false);
+      }, 1500);
+    } else {
+      setErrorMsg('Failed to initialize Supabase client with provided keys.');
+    }
+  };
+
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
     setErrorMsg(null);
     setInfoMsg(null);
 
+    const client = getSupabase();
+
     try {
-      if (isSupabaseConfigured && supabase) {
-        const { error } = await supabase.auth.signInWithOAuth({
+      if (client) {
+        const { error } = await client.auth.signInWithOAuth({
           provider: 'google',
           options: {
             redirectTo: window.location.origin,
@@ -59,10 +97,12 @@ export const LoginLandingScreen: React.FC<LoginLandingScreenProps> = ({
     setErrorMsg(null);
     setInfoMsg(null);
 
+    const client = getSupabase();
+
     try {
-      if (isSupabaseConfigured && supabase) {
+      if (client) {
         if (activeTab === 'signup') {
-          const { data, error } = await supabase.auth.signUp({
+          const { data, error } = await client.auth.signUp({
             email,
             password,
             options: {
@@ -71,7 +111,7 @@ export const LoginLandingScreen: React.FC<LoginLandingScreenProps> = ({
           });
           if (error) throw error;
           if (data?.user && !data.session) {
-            setInfoMsg('Account created successfully! Check your email or click Play to enter.');
+            setInfoMsg('Account created successfully! Check your email or click Enter Sanctum.');
             setLoading(false);
             setTimeout(() => {
               onLoginSuccess(email, fullName || email.split('@')[0]);
@@ -79,7 +119,7 @@ export const LoginLandingScreen: React.FC<LoginLandingScreenProps> = ({
             return;
           }
         } else {
-          const { error } = await supabase.auth.signInWithPassword({ email, password });
+          const { error } = await client.auth.signInWithPassword({ email, password });
           if (error) throw error;
         }
       }
@@ -90,6 +130,8 @@ export const LoginLandingScreen: React.FC<LoginLandingScreenProps> = ({
       setLoading(false);
     }
   };
+
+  const isConnected = isSupabaseReady();
 
   return (
     <div className="min-h-screen bg-[#121411] text-[#e3e3de] flex items-center justify-center p-6 relative overflow-hidden">
@@ -118,12 +160,63 @@ export const LoginLandingScreen: React.FC<LoginLandingScreenProps> = ({
         {/* Main Authentication Card */}
         <div className="glass-panel p-6 md:p-8 rounded-3xl border border-white/10 shadow-2xl space-y-5">
           {/* Supabase Status Pill */}
-          <div className="flex items-center justify-between bg-[#1e201d] px-3.5 py-2 rounded-xl border border-white/5 text-[11px]">
-            <span className="text-[#c4c7c7] font-body flex items-center gap-2">
-              <span className={`w-2 h-2 rounded-full ${isSupabaseConfigured ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
-              <span>Auth Service: {isSupabaseConfigured ? 'Supabase Live' : 'Instant Sync Mode'}</span>
-            </span>
-            <span className="text-[#D4AF37] font-mono font-bold text-[10px]">v2.4</span>
+          <div className="bg-[#1e201d] p-3 rounded-xl border border-white/5 text-[11px] space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[#c4c7c7] font-body flex items-center gap-2">
+                <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+                <span>Auth Service: {isConnected ? 'Supabase Connected' : 'Key Required'}</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowKeyConfig(!showKeyConfig)}
+                className="text-[#D4AF37] hover:underline font-bold text-[10px] cursor-pointer flex items-center gap-1"
+              >
+                <span className="material-symbols-outlined text-xs">key</span>
+                <span>{showKeyConfig ? 'Close Key Setup' : 'Supabase Key Setup'}</span>
+              </button>
+            </div>
+
+            {/* Config Keys Panel */}
+            {showKeyConfig && (
+              <form onSubmit={handleSaveKeys} className="pt-2 border-t border-white/10 space-y-2.5 text-left">
+                <p className="text-[10px] text-[#c4c7c7]/80">
+                  Enter your Supabase URL & Anon key to connect live authentication:
+                </p>
+                <div>
+                  <label className="block text-[9px] font-bold text-[#D4AF37] uppercase tracking-wider mb-1">
+                    Supabase Project URL
+                  </label>
+                  <input
+                    type="url"
+                    required
+                    value={customUrl}
+                    onChange={(e) => setCustomUrl(e.target.value)}
+                    placeholder="https://xyzproject.supabase.co"
+                    className="w-full bg-[#121411] border border-white/15 rounded-lg px-3 py-1.5 font-mono text-xs text-[#FAF9F6] focus:outline-none focus:border-[#D4AF37]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[9px] font-bold text-[#D4AF37] uppercase tracking-wider mb-1">
+                    Supabase Anon Key
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={customKey}
+                    onChange={(e) => setCustomKey(e.target.value)}
+                    placeholder="eyJhbGciOiJIUzI1NiIsInR..."
+                    className="w-full bg-[#121411] border border-white/15 rounded-lg px-3 py-1.5 font-mono text-xs text-[#FAF9F6] focus:outline-none focus:border-[#D4AF37]"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="w-full py-2 bg-[#D4AF37] text-[#121411] hover:bg-[#b5952f] rounded-lg font-body text-xs font-bold uppercase tracking-wider transition-all cursor-pointer shadow active:scale-95 flex items-center justify-center gap-1.5"
+                >
+                  <span className="material-symbols-outlined text-sm">save</span>
+                  <span>{keySaveSuccess ? 'KEYS CONNECTED!' : 'SAVE & INITIALIZE SUPABASE'}</span>
+                </button>
+              </form>
+            )}
           </div>
 
           {errorMsg && (
@@ -258,8 +351,17 @@ export const LoginLandingScreen: React.FC<LoginLandingScreenProps> = ({
             </button>
           </form>
 
-          {/* Quick Play as Guest option */}
-          <div className="pt-2 text-center border-t border-white/10">
+          {/* Enterprise ERP Auth System Option */}
+          <div className="pt-2 text-center border-t border-white/10 space-y-2">
+            <button
+              type="button"
+              onClick={() => setIsErpModalOpen(true)}
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-[#D4AF37] via-[#b8972e] to-[#997c23] hover:brightness-110 text-[#121411] font-body text-xs font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 shadow-lg"
+            >
+              <span className="material-symbols-outlined text-base">account_balance</span>
+              <span>Open Enterprise ERP Auth Algorithm</span>
+            </button>
+
             <button
               type="button"
               onClick={onPlayAsGuest}
@@ -270,6 +372,15 @@ export const LoginLandingScreen: React.FC<LoginLandingScreenProps> = ({
             </button>
           </div>
         </div>
+
+        {/* ERP Auth Modal Component */}
+        <ErpAuthModal
+          isOpen={isErpModalOpen}
+          onClose={() => setIsErpModalOpen(false)}
+          onLoginComplete={(session: ErpUserSession) => {
+            onLoginSuccess(session.studentIdOrEmail, session.name);
+          }}
+        />
 
         {/* Footer Note */}
         <p className="text-center font-body text-[11px] text-[#c4c7c7]/50">

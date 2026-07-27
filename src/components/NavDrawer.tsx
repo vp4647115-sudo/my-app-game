@@ -5,9 +5,11 @@ interface NavDrawerProps {
   isOpen: boolean;
   user: UserProfile;
   onClose: () => void;
-  onNavigate: (screen: 'home' | 'bot' | 'arena' | 'friend' | 'profile' | 'settings') => void;
+  onNavigate: (screen: 'home' | 'bot' | 'arena' | 'friend' | 'profile' | 'settings' | 'learn') => void;
   onStartOffline: () => void;
   onOpenAuth: () => void;
+  onOpenErpAuth?: () => void;
+  onOpenApkInstall?: () => void;
   onSignOut: () => void;
 }
 
@@ -18,6 +20,8 @@ export const NavDrawer: React.FC<NavDrawerProps> = ({
   onNavigate,
   onStartOffline,
   onOpenAuth,
+  onOpenErpAuth,
+  onOpenApkInstall,
   onSignOut,
 }) => {
   if (!isOpen) return null;
@@ -89,6 +93,20 @@ export const NavDrawer: React.FC<NavDrawerProps> = ({
 
             <button
               onClick={() => {
+                onNavigate('learn');
+                onClose();
+              }}
+              className="w-full flex items-center gap-3.5 px-4 py-3 rounded-xl bg-[#D4AF37]/15 hover:bg-[#D4AF37]/25 text-[#D4AF37] border border-[#D4AF37]/30 transition-colors text-left cursor-pointer active:scale-[0.98]"
+            >
+              <span className="material-symbols-outlined text-[#D4AF37] text-xl">psychology</span>
+              <div className="flex flex-col">
+                <span className="font-bold">Chess Master Academy</span>
+                <span className="text-[9px] opacity-80">Tactics, Lessons & Q&A</span>
+              </div>
+            </button>
+
+            <button
+              onClick={() => {
                 onNavigate('bot');
                 onClose();
               }}
@@ -153,6 +171,22 @@ export const NavDrawer: React.FC<NavDrawerProps> = ({
               <span>App Settings & Audio</span>
             </button>
 
+            {onOpenErpAuth && (
+              <button
+                onClick={() => {
+                  onOpenErpAuth();
+                  onClose();
+                }}
+                className="w-full flex items-center gap-3.5 px-4 py-3 rounded-xl bg-[#D4AF37]/20 hover:bg-[#D4AF37]/30 border border-[#D4AF37]/50 text-[#FAF9F6] transition-colors text-left cursor-pointer active:scale-[0.98]"
+              >
+                <span className="material-symbols-outlined text-[#D4AF37] text-xl">account_balance</span>
+                <div className="flex flex-col">
+                  <span className="font-bold text-xs">Enterprise ERP Auth</span>
+                  <span className="text-[9px] text-[#D4AF37]">Argon2id + TOTP Algorithm</span>
+                </div>
+              </button>
+            )}
+
             <button
               onClick={() => {
                 onOpenAuth();
@@ -160,9 +194,22 @@ export const NavDrawer: React.FC<NavDrawerProps> = ({
               }}
               className="w-full flex items-center gap-3.5 px-4 py-3 rounded-xl hover:bg-[#FAF9F6]/10 text-[#FAF9F6] transition-colors text-left cursor-pointer active:scale-[0.98]"
             >
-              <span className="material-symbols-outlined text-[#D4AF37] text-xl">lock</span>
-              <span>Account & Security</span>
+              <span className="material-symbols-outlined text-[#D4AF37] text-xl">login</span>
+              <span>Login & Account</span>
             </button>
+
+            {onOpenApkInstall && (
+              <button
+                onClick={() => {
+                  onOpenApkInstall();
+                  onClose();
+                }}
+                className="w-full flex items-center gap-3.5 px-4 py-3 rounded-xl bg-[#D4AF37]/10 hover:bg-[#D4AF37]/20 border border-[#D4AF37]/30 text-[#D4AF37] font-bold transition-colors text-left cursor-pointer active:scale-[0.98]"
+              >
+                <span className="material-symbols-outlined text-xl">get_app</span>
+                <span>Install Software / APK</span>
+              </button>
+            )}
           </nav>
         </div>
 

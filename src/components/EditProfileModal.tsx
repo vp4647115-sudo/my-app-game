@@ -12,6 +12,20 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ user, onSave
   const [country, setCountry] = useState(user.country);
   const [title, setTitle] = useState(user.title);
   const [bio, setBio] = useState(user.bio);
+  const [avatarUrl, setAvatarUrl] = useState(user.avatarUrl);
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          setAvatarUrl(reader.result);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,6 +35,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ user, onSave
       country: country.trim() || user.country,
       title: title.trim() || user.title,
       bio: bio.trim() || user.bio,
+      avatarUrl: avatarUrl || user.avatarUrl,
     });
     onClose();
   };
@@ -39,6 +54,39 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ user, onSave
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Avatar Upload Field */}
+          <div>
+            <label className="block font-body text-xs font-bold text-[#D4AF37] mb-2 uppercase tracking-wider">
+              Profile Picture / Avatar
+            </label>
+            <div className="flex items-center gap-4 bg-[#1e201d] p-3 rounded-xl border border-white/10">
+              <img
+                src={avatarUrl}
+                alt="Avatar preview"
+                className="w-14 h-14 rounded-full object-cover border-2 border-[#D4AF37]/50 shrink-0"
+              />
+              <div className="flex-1 min-w-0">
+                <label
+                  htmlFor="edit-modal-avatar-upload"
+                  className="px-3.5 py-1.5 bg-[#D4AF37] hover:bg-[#b5952f] text-[#121411] font-body text-xs font-bold rounded-lg cursor-pointer transition-all inline-flex items-center gap-1.5 active:scale-95 shadow"
+                >
+                  <span className="material-symbols-outlined text-sm">upload</span>
+                  <span>UPLOAD NEW PHOTO</span>
+                  <input
+                    id="edit-modal-avatar-upload"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                  />
+                </label>
+                <p className="font-body text-[10px] text-[#c4c7c7]/70 mt-1">
+                  Supports PNG, JPG, or GIF images
+                </p>
+              </div>
+            </div>
+          </div>
+
           <div>
             <label className="block font-body text-xs font-bold text-[#D4AF37] mb-1 uppercase tracking-wider">
               Profile Username

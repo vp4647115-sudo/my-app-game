@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Chess, Square, PieceSymbol, Color } from 'chess.js';
+import { animate, stagger } from 'animejs';
 import { ActiveMatchConfig, UserProfile, GameSettings, MatchHistoryItem } from '../types';
 import { getAIMove, evaluateBoard } from '../services/aiEngine';
 import { soundService } from '../services/sound';
-import { ChessPieceSvg } from './ChessPieceSvg';
+import { ChessPieceSvg, PieceStyle } from './ChessPieceSvg';
 
 interface ChessBoardGameProps {
   config: ActiveMatchConfig;
@@ -31,6 +32,15 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
     reason: string;
     eloChange: number;
   } | null>(null);
+
+  // Local Graphic Customization Overrides
+  const [activeBoardTheme, setActiveBoardTheme] = useState<'walnut' | 'emerald' | 'obsidian' | 'royal' | 'marble'>(
+    settings.boardTheme || 'walnut'
+  );
+  const [activePieceStyle, setActivePieceStyle] = useState<PieceStyle>(
+    settings.pieceStyle || 'neo-grandmaster'
+  );
+  const [showStyleMenu, setShowStyleMenu] = useState<boolean>(false);
 
   // Clocks in seconds
   const [playerTime, setPlayerTime] = useState<number>(config.timeControlMinutes * 60);
@@ -65,13 +75,70 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
   const playSnd = useCallback(
     (type: 'move' | 'capture' | 'check' | 'end', victory?: boolean) => {
       if (!settings.soundEnabled) return;
-      if (type === 'move') soundService.playMove(settings.volume);
-      else if (type === 'capture') soundService.playCapture(settings.volume);
-      else if (type === 'check') soundService.playCheck(settings.volume);
-      else if (type === 'end') soundService.playGameEnd(Boolean(victory), settings.volume);
+      try {
+        if (type === 'move') soundService.playMove(settings.volume);
+        else if (type === 'capture') soundService.playCapture(settings.volume);
+        else if (type === 'check') soundService.playCheck(settings.volume);
+        else if (type === 'end') soundService.playGameEnd(Boolean(victory), settings.volume);
+      } catch (err) {
+        // Prevent audio context errors from leaking to console
+      }
     },
     [settings.soundEnabled, settings.volume]
   );
+
+  // Anime.js Entrance Animation for Chessboard
+  useEffect(() => {
+    if (!settings.lowPerformanceMode) {
+      animate('.board-square', {
+        scale: [0.85, 1],
+        opacity: [0, 1],
+        delay: stagger(10, { grid: [8, 8], from: 'center' }),
+        duration: 600,
+        ease: 'outElastic(1, 0.8)',
+      });
+    }
+  }, [settings.lowPerformanceMode]);
+
+  // Anime.js Last Move Impact Animation
+  useEffect(() => {
+    if (lastMove && !settings.lowPerformanceMode) {
+      animate('.last-move-sq', {
+        scale: [1.2, 1],
+        duration: 350,
+        ease: 'outBack',
+      });
+    }
+  }, [lastMove, settings.lowPerformanceMode]);
+
+  // Gemini AI In-Game Coach State
+  const [isGeminiCoachOpen, setIsGeminiCoachOpen] = useState(false);
+  const [geminiCoachData, setGeminiCoachData] = useState<any>(null);
+  const [isCoachLoading, setIsCoachLoading] = useState(false);
+
+  const handleFetchGeminiCoach = async () => {
+    setIsCoachLoading(true);
+    setIsGeminiCoachOpen(true);
+    try {
+      const res = await fetch('/api/gemini/coach', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fen: game.fen(),
+          lastMove: lastMove ? { from: lastMove.from, to: lastMove.to } : undefined,
+          playerElo: user.elo,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setGeminiCoachData(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch coach:', err);
+    } finally {
+      setIsCoachLoading(false);
+    }
+  };
 
   // Handle Game Over
   const handleGameOver = useCallback(
@@ -108,13 +175,14 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
     [playerColor, handleGameOver, playSnd]
   );
 
-  // Real-time friend room state sync (polling every 800ms)
+  // Real-time friend room state sync (polling every 800ms safely)
   useEffect(() => {
     if (config.mode !== 'friend' || !config.roomCode || gameOverResult) return;
 
     const syncRoom = async () => {
       try {
         const res = await fetch(`/api/rooms/${config.roomCode}`);
+        if (!res.ok) return;
         const data = await res.json();
         if (data.success && data.room && data.room.fen) {
           if (data.room.fen !== gameRef.current.fen()) {
@@ -128,8 +196,8 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
             checkGameEndConditions(updated);
           }
         }
-      } catch {
-        // Ignore network error
+      } catch (err) {
+        // Catch silently to prevent unhandled rejection console noise
       }
     };
 
@@ -198,6 +266,9 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
             checkGameEndConditions(copy);
           }
         })
+        .catch(() => {
+          // Silent fallback for AI promise errors
+        })
         .finally(() => {
           setIsBotThinking(false);
           botMovingRef.current = false;
@@ -210,7 +281,7 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
     if (gameOverResult || isBotThinking) return;
 
     if (!isPlayerTurn) {
-      setTurnNotice("It is your opponent's turn to move! Please wait.");
+      setTurnNotice("It is your opponent's turn to move!");
       setTimeout(() => setTurnNotice(null), 2500);
       return;
     }
@@ -232,7 +303,7 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
         const moveRes = copy.move({
           from: selectedSquare,
           to: square,
-          promotion: 'q', // Auto queen for simplicity
+          promotion: 'q', // Auto queen
         });
 
         if (moveRes) {
@@ -305,9 +376,34 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
   const rows = playerColor === 'w' ? [8, 7, 6, 5, 4, 3, 2, 1] : [1, 2, 3, 4, 5, 6, 7, 8];
   const cols = playerColor === 'w' ? ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'] : ['h', 'g', 'f', 'e', 'd', 'c', 'b', 'a'];
 
-  // Calculate Evaluation Score Bar
-  const evalScore = evaluateBoard(game); // Positive = White advantage, Negative = Black advantage
+  // Memoize Evaluation Score to avoid re-evaluating on timer ticks & hovers
+  const evalScore = React.useMemo(() => evaluateBoard(game), [game]);
   const evalPercent = Math.max(10, Math.min(90, 50 + evalScore / 30));
+
+  // Memoize valid moves set for O(1) square lookups
+  const validMovesSet = React.useMemo(() => new Set(validMoves), [validMoves]);
+
+  // Determine Board Theme Colors & Styling
+  const getSquareColor = (isDarkSquare: boolean) => {
+    if (settings.highContrast) {
+      return isDarkSquare ? 'bg-[#292a27]' : 'bg-[#5f5e5e]';
+    }
+    switch (activeBoardTheme) {
+      case 'emerald':
+        return isDarkSquare ? 'bg-[#1B3B2B]' : 'bg-[#E8E4D8]';
+      case 'obsidian':
+        return isDarkSquare ? 'bg-[#161B22]' : 'bg-[#38444D]';
+      case 'royal':
+        return isDarkSquare ? 'bg-[#1A2332]' : 'bg-[#E5E9F0]';
+      case 'marble':
+        return isDarkSquare ? 'bg-[#2B2B2B]' : 'bg-[#F2F2F0]';
+      case 'walnut':
+      default:
+        return isDarkSquare ? 'bg-[#3D2B24]' : 'bg-[#D7BA89]';
+    }
+  };
+
+  const isCheckState = game.inCheck();
 
   return (
     <div className="pt-16 pb-24 px-4 max-w-2xl mx-auto flex flex-col items-center justify-center min-h-screen text-[#e3e3de] relative">
@@ -319,22 +415,107 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
         </div>
       )}
 
+      {/* Auto Check Warning Banner */}
+      {isCheckState && (
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-red-600 text-white px-6 py-2.5 rounded-xl font-headline text-sm font-bold tracking-widest uppercase shadow-[0_0_30px_rgba(220,38,38,0.8)] animate-pulse flex items-center gap-2 border border-red-300">
+          <span className="material-symbols-outlined text-lg">warning</span>
+          <span>KING IS IN CHECK!</span>
+        </div>
+      )}
+
       {/* Top Match Bar Header */}
       <div className="w-full flex items-center justify-between mb-4">
         <button
           onClick={onExit}
-          className="p-2 rounded-lg glass-panel hover:bg-white/10 active:scale-95 transition-all text-[#c4c7c7] flex items-center gap-1.5 text-xs font-body"
+          className="p-2 rounded-lg glass-panel hover:bg-white/10 active:scale-95 transition-all text-[#c4c7c7] flex items-center gap-1.5 text-xs font-body cursor-pointer"
         >
           <span className="material-symbols-outlined text-sm">arrow_back</span>
           <span>Exit Sanctum</span>
         </button>
 
-        <div className="flex items-center gap-2">
-          <span className="bg-[#FAF9F6]/5 px-3 py-1 rounded-full border border-white/10 font-body text-[10px] text-[#D4AF37] font-bold uppercase flex items-center gap-2">
-            <span>{config.timeControlMinutes}m Blitz • {config.rated ? 'Rated' : 'Casual'}</span>
-            <span className="text-white/40">•</span>
-            <span className="text-[#FAF9F6] font-mono">Match: {formatTime(totalMatchSeconds)}</span>
-          </span>
+        {/* Graphics Customization Toggle */}
+        <div className="relative">
+          <button
+            onClick={() => setShowStyleMenu(!showStyleMenu)}
+            className="px-3 py-1.5 rounded-lg glass-panel hover:bg-white/10 active:scale-95 transition-all text-[#D4AF37] border border-[#D4AF37]/30 flex items-center gap-1.5 text-xs font-body font-bold cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-sm">palette</span>
+            <span>Board & Pieces</span>
+            <span className="material-symbols-outlined text-xs">expand_more</span>
+          </button>
+
+          {/* Graphics Customization Dropdown Panel */}
+          {showStyleMenu && (
+            <div className="absolute right-0 top-10 z-50 glass-panel p-4 rounded-xl border border-white/15 shadow-2xl w-64 space-y-4 animate-fade-in">
+              <div className="flex justify-between items-center border-b border-white/10 pb-2">
+                <span className="font-headline text-xs font-bold text-[#FAF9F6]">GRAPHICS CUSTOMIZER</span>
+                <button
+                  onClick={() => setShowStyleMenu(false)}
+                  className="text-white/60 hover:text-white"
+                >
+                  <span className="material-symbols-outlined text-sm">close</span>
+                </button>
+              </div>
+
+              {/* Board Theme Options */}
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-bold text-[#D4AF37] uppercase tracking-wider block">
+                  Board Theme
+                </span>
+                <div className="grid grid-cols-2 gap-1.5 text-[11px]">
+                  {[
+                    { id: 'walnut', label: 'Walnut & Gold' },
+                    { id: 'emerald', label: 'Emerald Pearl' },
+                    { id: 'obsidian', label: 'Obsidian Neon' },
+                    { id: 'royal', label: 'Royal Sapphire' },
+                  ].map((theme) => (
+                    <button
+                      key={theme.id}
+                      onClick={() => {
+                        setActiveBoardTheme(theme.id as any);
+                      }}
+                      className={`px-2 py-1.5 rounded text-left border transition-all cursor-pointer ${
+                        activeBoardTheme === theme.id
+                          ? 'bg-[#D4AF37] text-[#121411] font-bold border-[#D4AF37]'
+                          : 'bg-white/5 text-[#c4c7c7] border-white/10 hover:bg-white/10'
+                      }`}
+                    >
+                      {theme.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Piece Set Options */}
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-bold text-[#D4AF37] uppercase tracking-wider block">
+                  Piece Set Style
+                </span>
+                <div className="grid grid-cols-2 gap-1.5 text-[11px]">
+                  {[
+                    { id: 'neo-grandmaster', label: 'Neo-Grandmaster' },
+                    { id: 'classic-staunton', label: 'Classic Staunton' },
+                    { id: '3d-metallic', label: '3D Metallic' },
+                    { id: 'minimalist', label: 'Minimalist' },
+                  ].map((pStyle) => (
+                    <button
+                      key={pStyle.id}
+                      onClick={() => {
+                        setActivePieceStyle(pStyle.id as PieceStyle);
+                      }}
+                      className={`px-2 py-1.5 rounded text-left border transition-all cursor-pointer ${
+                        activePieceStyle === pStyle.id
+                          ? 'bg-[#D4AF37] text-[#121411] font-bold border-[#D4AF37]'
+                          : 'bg-white/5 text-[#c4c7c7] border-white/10 hover:bg-white/10'
+                      }`}
+                    >
+                      {pStyle.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -371,7 +552,7 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
               <span className="font-body text-[10px] text-[#c4c7c7]/80 flex items-center gap-1 font-semibold">
                 {config.mode === 'offline'
                   ? game.turn() === 'b'
-                    ? "Black's Turn (Active Clock)"
+                    ? "Black's Turn"
                     : "White's Turn"
                   : isTopClockActive
                   ? "Opponent's turn to move"
@@ -411,9 +592,9 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
         />
       </div>
 
-      {/* Chessboard Container */}
-      <div className="w-full aspect-square max-w-[460px] glass-panel rounded-2xl p-2 md:p-3 border-2 border-[#D4AF37]/30 shadow-2xl relative">
-        <div className="w-full h-full grid grid-cols-8 grid-rows-8 rounded-xl overflow-hidden shadow-inner">
+      {/* Redesigned Graphic Chessboard Container */}
+      <div className={`w-full aspect-square max-w-[460px] ${settings.lowPerformanceMode ? 'bg-[#181a17]' : 'glass-panel'} rounded-2xl p-2 md:p-3 border-2 border-[#D4AF37]/40 shadow-2xl relative`}>
+        <div className="w-full h-full grid grid-cols-8 grid-rows-8 rounded-xl overflow-hidden shadow-2xl border border-white/10">
           {rows.map((row) =>
             cols.map((col) => {
               const square = `${col}${row}` as Square;
@@ -421,59 +602,62 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
               const piece = game.get(square);
 
               const isSelected = selectedSquare === square;
-              const isValidTarget = validMoves.includes(square);
+              const isValidTarget = validMovesSet.has(square);
               const isLastMove = lastMove?.from === square || lastMove?.to === square;
               const isKingInCheck =
                 game.inCheck() && piece?.type === 'k' && piece?.color === game.turn();
 
-              // Custom color scheme
-              let bgClass = isDarkSquare
-                ? settings.highContrast
-                  ? 'bg-[#292a27]'
-                  : 'bg-[#3D2B24]' // Walnut
-                : settings.highContrast
-                ? 'bg-[#5f5e5e]'
-                : 'bg-[#d7ba89]'; // Ivory
+              // High Graphic Background Styles
+              let bgClass = getSquareColor(isDarkSquare);
 
-              if (isSelected) bgClass = 'bg-[#D4AF37]/80';
-              else if (isKingInCheck) bgClass = 'bg-red-600/80 animate-pulse';
-              else if (isLastMove) bgClass = isDarkSquare ? 'bg-[#D4AF37]/40' : 'bg-[#D4AF37]/30';
+              if (isSelected) bgClass = 'bg-[#D4AF37]/80 ring-4 ring-amber-300 z-30 shadow-2xl';
+              else if (isKingInCheck) bgClass = 'bg-red-600/90 shadow-[0_0_25px_rgba(239,68,68,1)] animate-pulse z-30';
+              else if (isLastMove) bgClass += ' ring-2 ring-[#D4AF37]/60 bg-blend-overlay';
 
               return (
                 <div
                   key={square}
                   onClick={() => handleSquareClick(square)}
-                  className={`relative flex items-center justify-center cursor-pointer select-none transition-colors duration-150 ${bgClass}`}
+                  className={`board-square ${
+                    isLastMove ? 'last-move-sq' : ''
+                  } relative flex items-center justify-center cursor-pointer select-none transition-all duration-150 border border-black/5 ${bgClass}`}
                 >
                   {/* File/Rank Notation Labels */}
                   {col === (playerColor === 'w' ? 'a' : 'h') && (
-                    <span className="absolute top-0.5 left-1 text-[9px] font-bold opacity-30 pointer-events-none">
+                    <span className="absolute top-0.5 left-1 text-[9px] font-extrabold opacity-40 pointer-events-none">
                       {row}
                     </span>
                   )}
                   {row === (playerColor === 'w' ? 1 : 8) && (
-                    <span className="absolute bottom-0.5 right-1 text-[9px] font-bold opacity-30 pointer-events-none">
+                    <span className="absolute bottom-0.5 right-1 text-[9px] font-extrabold opacity-40 pointer-events-none">
                       {col}
                     </span>
                   )}
 
-                  {/* Valid move target indicator dot */}
+                  {/* King Check Pulsing Aura Visual */}
+                  {isKingInCheck && (
+                    <div className="absolute inset-0 rounded-lg bg-red-500/40 animate-ping pointer-events-none" />
+                  )}
+
+                  {/* Valid Move Target Highlight Dot or Capture Ring */}
                   {isValidTarget && (
                     <div
-                      className={`absolute rounded-full z-10 ${
-                        piece ? 'w-full h-full border-4 border-[#D4AF37]' : 'w-3.5 h-3.5 bg-[#D4AF37]/90'
+                      className={`absolute rounded-full z-10 transition-transform ${
+                        piece
+                          ? 'w-full h-full border-4 border-amber-400 bg-amber-400/20 scale-95'
+                          : 'w-4 h-4 bg-[#D4AF37] shadow-[0_0_10px_rgba(212,175,55,0.8)]'
                       }`}
                     />
                   )}
 
-                  {/* Chess Piece Graphic */}
+                  {/* High Quality Chess Piece Render */}
                   {piece && (
                     <div
-                      className={`w-[82%] h-[82%] flex items-center justify-center z-20 pointer-events-none transition-transform duration-200 ${
-                        isSelected ? 'scale-110 drop-shadow-xl' : 'drop-shadow'
+                      className={`w-[85%] h-[85%] flex items-center justify-center z-20 pointer-events-none transition-transform duration-200 ${
+                        isSelected ? 'scale-110 drop-shadow-2xl' : 'drop-shadow-md'
                       }`}
                     >
-                      <ChessPieceSvg color={piece.color} type={piece.type} />
+                      <ChessPieceSvg color={piece.color} type={piece.type} style={activePieceStyle} />
                     </div>
                   )}
                 </div>
@@ -503,7 +687,7 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
             <span className="font-body text-[10px] text-[#c4c7c7]/80 flex items-center gap-1 font-semibold">
               {config.mode === 'offline'
                 ? game.turn() === 'w'
-                  ? "White's Turn (Active Clock)"
+                  ? "White's Turn"
                   : "Black's Turn"
                 : isBottomClockActive
                 ? 'Your turn to move'
@@ -535,21 +719,98 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
       </div>
 
       {/* Bottom Game Controls */}
-      <div className="w-full flex items-center justify-between gap-3 mt-4">
+      <div className="w-full flex items-center justify-between gap-2.5 mt-4">
         <button
           onClick={handleUndo}
           disabled={moveHistory.length === 0}
           className="flex-1 py-2.5 rounded-lg glass-panel text-xs font-body font-bold text-[#c4c7c7] hover:text-[#FAF9F6] border border-white/10 active:scale-95 transition-all disabled:opacity-40 cursor-pointer"
         >
-          Undo
+          Undo Move
         </button>
+
+        <button
+          onClick={handleFetchGeminiCoach}
+          className="flex-1 py-2.5 rounded-lg bg-[#D4AF37]/15 hover:bg-[#D4AF37]/25 text-xs font-body font-bold text-[#D4AF37] border border-[#D4AF37]/40 active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-md"
+        >
+          <span className="material-symbols-outlined text-sm">psychology</span>
+          <span>Chess Master</span>
+        </button>
+
         <button
           onClick={handleResign}
           className="flex-1 py-2.5 rounded-lg glass-panel text-xs font-body font-bold text-red-400 border border-red-400/20 hover:bg-red-400/10 active:scale-95 transition-all cursor-pointer"
         >
-          Resign
+          Resign Match
         </button>
       </div>
+
+      {/* Chess Master Coach Modal */}
+      {isGeminiCoachOpen && (
+        <div className="fixed inset-0 z-50 bg-[#121411]/90 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
+          <div className="glass-panel p-6 rounded-2xl max-w-md w-full space-y-4 border border-[#D4AF37]/40 shadow-2xl relative">
+            <button
+              onClick={() => setIsGeminiCoachOpen(false)}
+              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-[#e3e3de] flex items-center justify-center cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-sm">close</span>
+            </button>
+
+            <div className="flex items-center gap-3 border-b border-white/10 pb-3">
+              <div className="w-10 h-10 rounded-xl bg-[#D4AF37]/20 border border-[#D4AF37] flex items-center justify-center text-[#D4AF37] shrink-0">
+                <span className="material-symbols-outlined text-xl">psychology</span>
+              </div>
+              <div>
+                <h3 className="font-headline text-base font-bold text-[#FAF9F6]">
+                  Chess Master AI Analysis
+                </h3>
+                <span className="text-[10px] text-[#D4AF37] font-mono">Live In-Game Coach</span>
+              </div>
+            </div>
+
+            {isCoachLoading ? (
+              <div className="py-8 flex flex-col items-center justify-center space-y-3">
+                <span className="material-symbols-outlined text-3xl text-[#D4AF37] animate-spin">
+                  progress_activity
+                </span>
+                <p className="text-xs text-[#c4c7c7]">Chess Master is analyzing current board state...</p>
+              </div>
+            ) : geminiCoachData ? (
+              <div className="space-y-3 text-xs">
+                <div className="p-3 rounded-xl bg-[#121411] border border-[#D4AF37]/30">
+                  <span className="font-bold text-[#D4AF37] uppercase tracking-wider block mb-1">
+                    Key Tactical Concept: {geminiCoachData.keyConcept}
+                  </span>
+                  <p className="text-[#c4c7c7] leading-relaxed">{geminiCoachData.evaluation}</p>
+                </div>
+
+                <div className="p-3 rounded-xl bg-[#121411] border border-white/10">
+                  <span className="font-bold text-[#FAF9F6] block mb-1">Coach Recommendation:</span>
+                  <p className="text-[#c4c7c7] leading-relaxed">{geminiCoachData.coachingAdvice}</p>
+                </div>
+
+                {geminiCoachData.recommendedMoves?.length > 0 && (
+                  <div className="space-y-1.5">
+                    <span className="font-bold text-[#FAF9F6] block">Candidate Moves:</span>
+                    {geminiCoachData.recommendedMoves.map((m: any, i: number) => (
+                      <div key={i} className="p-2.5 rounded-lg bg-[#121411] border border-white/5 font-mono">
+                        <span className="text-[#D4AF37] font-bold">{m.san}</span> ({m.from} → {m.to}):{' '}
+                        <span className="text-[#c4c7c7] font-sans">{m.explanation}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : null}
+
+            <button
+              onClick={() => setIsGeminiCoachOpen(false)}
+              className="w-full py-2.5 bg-[#D4AF37] text-[#121411] font-bold text-xs uppercase rounded-xl cursor-pointer"
+            >
+              Back to Game
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Game Over Modal */}
       {gameOverResult && (

@@ -1,24 +1,59 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { UserProfile, MatchHistoryItem, GameSettings } from '../types';
 
-// Safely obtain environment variables for Supabase
+// Safely obtain environment variables or localStorage keys for Supabase
 const env = (import.meta as unknown as { env?: Record<string, string> }).env || {};
-const supabaseUrl = env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = env.VITE_SUPABASE_ANON_KEY || '';
 
-export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
+export function getSupabaseCredentials(): { url: string; key: string } {
+  const envUrl = env.VITE_SUPABASE_URL || '';
+  const envKey = env.VITE_SUPABASE_ANON_KEY || '';
+  
+  const localUrl = typeof localStorage !== 'undefined' ? localStorage.getItem('vpn_chess_supabase_url') || '' : '';
+  const localKey = typeof localStorage !== 'undefined' ? localStorage.getItem('vpn_chess_supabase_key') || '' : '';
+
+  return {
+    url: (envUrl || localUrl).trim(),
+    key: (envKey || localKey).trim(),
+  };
+}
 
 let supabaseInstance: SupabaseClient | null = null;
 
-if (isSupabaseConfigured) {
-  try {
-    supabaseInstance = createClient(supabaseUrl, supabaseAnonKey);
-  } catch (err) {
-    console.warn('Failed to initialize Supabase client:', err);
+export function initSupabaseClient(): SupabaseClient | null {
+  const { url, key } = getSupabaseCredentials();
+  if (url && key) {
+    try {
+      supabaseInstance = createClient(url, key);
+    } catch (err) {
+      console.warn('Failed to initialize Supabase client:', err);
+      supabaseInstance = null;
+    }
+  } else {
+    supabaseInstance = null;
   }
+  return supabaseInstance;
 }
 
+// Initial instance setup
+initSupabaseClient();
+
+export function saveSupabaseCredentials(url: string, key: string): SupabaseClient | null {
+  if (typeof localStorage !== 'undefined') {
+    localStorage.setItem('vpn_chess_supabase_url', url.trim());
+    localStorage.setItem('vpn_chess_supabase_key', key.trim());
+  }
+  return initSupabaseClient();
+}
+
+export const getSupabase = () => supabaseInstance || initSupabaseClient();
 export const supabase = supabaseInstance;
+
+export function isSupabaseReady(): boolean {
+  const { url, key } = getSupabaseCredentials();
+  return Boolean(url && key);
+}
+
+export const isSupabaseConfigured = isSupabaseReady();
 
 // Local default user profile matching real user score initialization
 export const DEFAULT_PROFILE: UserProfile = {
@@ -44,6 +79,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
   reducedMotion: false,
   highContrast: false,
   boardTheme: 'walnut',
+  pieceStyle: 'neo-grandmaster',
 };
 
 // Real score match history (starts empty, only real matches are saved)
@@ -66,9 +102,10 @@ export function saveUserProfile(profile: UserProfile): void {
   localStorage.setItem('vpn_chess_profile', JSON.stringify(profile));
   
   // Try syncing to Supabase if connected
-  if (supabase) {
+  const client = getSupabase();
+  if (client) {
     try {
-      supabase
+      client
         .from('profiles')
         .upsert({
           id: profile.id,
@@ -112,9 +149,10 @@ export function addMatchHistoryItem(item: MatchHistoryItem): MatchHistoryItem[] 
   const updated = [item, ...current];
   localStorage.setItem('vpn_chess_history', JSON.stringify(updated));
 
-  if (supabase) {
+  const client = getSupabase();
+  if (client) {
     try {
-      supabase
+      client
         .from('matches')
         .insert({
           id: item.id,

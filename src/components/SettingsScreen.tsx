@@ -7,6 +7,7 @@ interface SettingsScreenProps {
   settings: GameSettings;
   onUpdateSettings: (newSettings: GameSettings) => void;
   onOpenEditProfile: () => void;
+  onOpenApkInstall?: () => void;
   onSignOut: () => void;
   onBack?: () => void;
 }
@@ -16,6 +17,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   settings,
   onUpdateSettings,
   onOpenEditProfile,
+  onOpenApkInstall,
   onSignOut,
   onBack,
 }) => {
@@ -33,6 +35,10 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
 
   const handleToggleHighContrast = (e: React.ChangeEvent<HTMLInputElement>) => {
     onUpdateSettings({ ...settings, highContrast: e.target.checked });
+  };
+
+  const handleToggleLowPerf = (e: React.ChangeEvent<HTMLInputElement>) => {
+    onUpdateSettings({ ...settings, lowPerformanceMode: e.target.checked });
   };
 
   return (
@@ -174,14 +180,78 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           </div>
         </section>
 
-        {/* Accessibility Card */}
+        {/* Board & Piece Customization Card */}
+        <section className="glass-panel rounded-xl p-6 flex flex-col space-y-6 border border-white/10 shadow-lg md:col-span-2">
+          <div className="flex items-center gap-3">
+            <span className="material-symbols-outlined text-[#D4AF37]">palette</span>
+            <h3 className="font-headline text-lg font-bold text-[#FAF9F6]">Board & Graphic Themes</h3>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label className="font-body text-xs font-bold text-[#D4AF37] uppercase tracking-wider block">
+                Default Board Theme
+              </label>
+              <select
+                value={settings.boardTheme || 'walnut'}
+                onChange={(e) => onUpdateSettings({ ...settings, boardTheme: e.target.value as any })}
+                className="w-full bg-[#1a1a1a] border border-white/10 rounded-lg px-3 py-2 text-sm text-[#FAF9F6] focus:outline-none focus:border-[#D4AF37] cursor-pointer"
+              >
+                <option value="walnut">Walnut & Gold (Classic Wood)</option>
+                <option value="emerald">Emerald Pearl (Regal Green)</option>
+                <option value="obsidian">Obsidian Neon (Midnight Dark)</option>
+                <option value="royal">Royal Sapphire (Velvet Navy)</option>
+                <option value="marble">Cararra Marble (High Lux)</option>
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="font-body text-xs font-bold text-[#D4AF37] uppercase tracking-wider block">
+                Chess Piece Style
+              </label>
+              <select
+                value={settings.pieceStyle || 'neo-grandmaster'}
+                onChange={(e) => onUpdateSettings({ ...settings, pieceStyle: e.target.value as any })}
+                className="w-full bg-[#1a1a1a] border border-white/10 rounded-lg px-3 py-2 text-sm text-[#FAF9F6] focus:outline-none focus:border-[#D4AF37] cursor-pointer"
+              >
+                <option value="neo-grandmaster">Neo-Grandmaster (Gold & Onyx HD)</option>
+                <option value="classic-staunton">Classic Staunton Vector</option>
+                <option value="3d-metallic">3D Metallic Brass & Silver</option>
+                <option value="minimalist">Minimalist Modern Silhouette</option>
+              </select>
+            </div>
+          </div>
+        </section>
+
+        {/* Accessibility & Low-End Mobile Optimization Card */}
         <section className="glass-panel rounded-xl p-6 flex flex-col space-y-6 border border-white/10 shadow-lg">
           <div className="flex items-center gap-3">
-            <span className="material-symbols-outlined text-[#D4AF37]">visibility</span>
-            <h3 className="font-headline text-lg font-bold text-[#FAF9F6]">Accessibility</h3>
+            <span className="material-symbols-outlined text-[#D4AF37]">bolt</span>
+            <h3 className="font-headline text-lg font-bold text-[#FAF9F6]">Low-End Mobile Performance</h3>
           </div>
 
           <div className="space-y-6">
+            <div className="flex justify-between items-center p-3 rounded-xl bg-amber-500/10 border border-amber-500/30">
+              <div className="flex flex-col pr-3">
+                <span className="font-body text-sm font-bold text-[#D4AF37] flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-base">speed</span>
+                  Ultra Performance Mode (Low-End Mobile)
+                </span>
+                <span className="text-[11px] text-[#c4c7c7] mt-0.5">
+                  Disables heavy 3D canvas background & GPU blur filters for silky smooth 60 FPS on low-end phones.
+                </span>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                <input
+                  type="checkbox"
+                  checked={Boolean(settings.lowPerformanceMode)}
+                  onChange={handleToggleLowPerf}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-[#FAF9F6] after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#D4AF37]" />
+              </label>
+            </div>
+
             <div className="flex justify-between items-center">
               <div className="flex flex-col">
                 <span className="font-body text-sm font-semibold text-[#FAF9F6]">
@@ -223,6 +293,28 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             </div>
           </div>
         </section>
+
+        {/* APK / App Installation Card */}
+        {onOpenApkInstall && (
+          <section className="glass-panel rounded-xl p-6 flex flex-col space-y-4 border border-[#D4AF37]/30 shadow-lg md:col-span-2 bg-[#D4AF37]/5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-2xl text-[#D4AF37]">android</span>
+                <div>
+                  <h3 className="font-headline text-lg font-bold text-[#FAF9F6]">Install Software / APK</h3>
+                  <p className="text-xs text-[#c4c7c7]">Run VPN Chess as a native full-screen app on Android, Mobile, or PC.</p>
+                </div>
+              </div>
+              <button
+                onClick={onOpenApkInstall}
+                className="px-5 py-2 bg-[#D4AF37] hover:bg-[#b8972e] text-[#121411] font-bold text-xs rounded-lg uppercase tracking-wider transition-all cursor-pointer active:scale-95 shadow-md flex items-center gap-1.5"
+              >
+                <span className="material-symbols-outlined text-sm">download</span>
+                <span>INSTALL APP</span>
+              </button>
+            </div>
+          </section>
+        )}
       </div>
 
       {/* Danger Zone / Logout */}
