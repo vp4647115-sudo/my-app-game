@@ -114,74 +114,143 @@ function minimax(
   }
 }
 
-// Compute best move for AI
+// Compute best move for AI without mutating the input game or freezing the UI
 export async function getAIMove(
   game: Chess,
   difficulty: AIDifficulty
 ): Promise<string | null> {
-  const possibleMoves = game.moves({ verbose: true });
-  if (possibleMoves.length === 0) return null;
+  try {
+    // ALWAYS create a clone so we never mutate the React component's game state
+    const workingGame = new Chess(game.fen());
+    const possibleMoves = workingGame.moves({ verbose: true });
+    if (possibleMoves.length === 0) return null;
 
-  // Add small artificial delay for realistic bot thinking
-  const delayMs = Math.min(1000, 300 + Math.random() * 500);
-  await new Promise((resolve) => setTimeout(resolve, delayMs));
+    // Add small artificial delay for realistic bot thinking
+    const delayMs = Math.min(800, 200 + Math.random() * 400);
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
 
-  // Determine difficulty profile
-  if (difficulty === 'beginner') {
-    // 70% random, 30% basic capture
-    if (Math.random() < 0.7) {
-      const randomIndex = Math.floor(Math.random() * possibleMoves.length);
-      return possibleMoves[randomIndex].san;
-    }
-  } else if (difficulty === 'easy') {
-    // 35% random move, else depth 1 search
-    if (Math.random() < 0.35) {
-      const randomIndex = Math.floor(Math.random() * possibleMoves.length);
-      return possibleMoves[randomIndex].san;
-    }
-  }
+    // Fallback default move
+    const defaultRandomIndex = Math.floor(Math.random() * possibleMoves.length);
+    const fallbackMove = possibleMoves[defaultRandomIndex].san;
 
-  let searchDepth = 1;
-  if (difficulty === 'medium') searchDepth = 2;
-  else if (difficulty === 'hard') searchDepth = 2;
-  else if (difficulty === 'expert') searchDepth = 3;
-  else if (difficulty === 'master') searchDepth = 3;
-  else if (difficulty === 'grandmaster') searchDepth = 4;
-
-  const isAIWhite = game.turn() === 'w';
-  let bestMove: string = possibleMoves[0].san;
-  let bestValue = isAIWhite ? -Infinity : Infinity;
-
-  // Prioritize captures and checks for move ordering
-  possibleMoves.sort((a, b) => {
-    const aVal = a.captured ? 10 : 0;
-    const bVal = b.captured ? 10 : 0;
-    return bVal - aVal;
-  });
-
-  for (const move of possibleMoves) {
-    game.move(move);
-    const boardValue = minimax(
-      game,
-      searchDepth - 1,
-      -Infinity,
-      Infinity,
-      !isAIWhite
-    );
-    game.undo();
-
-    if (isAIWhite) {
-      if (boardValue > bestValue) {
-        bestValue = boardValue;
-        bestMove = move.san;
+    // Beginner / Easy random move chance
+    if (difficulty === 'beginner') {
+      if (Math.random() < 0.7) {
+        return fallbackMove;
       }
-    } else {
-      if (boardValue < bestValue) {
-        bestValue = boardValue;
-        bestMove = move.san;
+    } else if (difficulty === 'easy') {
+      if (Math.random() < 0.35) {
+        return fallbackMove;
       }
     }
-  }
 
-  return bestMove;
+    let searchDepth = 1;
+    if (difficulty === 'medium' || difficulty === 'hard') searchDepth = 2;
+    else if (difficulty === 'expert' || difficulty === 'master') searchDepth = 2;
+    else if (difficulty === 'grandmaster') searchDepth = 3;
+
+    let nodesEvaluated = 0;
+    const MAX_NODES = 1200;
+
+    function minimaxBounded(
+      g: Chess,
+      depth: number,
+      alpha: number,
+      beta: number,
+      isMaximizing: boolean
+    ): number {
+      nodesEvaluated++;
+      if (depth === 0 || g.isGameOver() || nodesEvaluated >= MAX_NODES) {
+        return evaluateBoard(g);
+      }
+
+      const moves = g.moves();
+      if (moves.length === 0) return evaluateBoard(g);
+
+      if (isMaximizing) {
+        let maxEval = -Infinity;
+        for (const m of moves) {
+          try {
+            g.move(m);
+            const evalScore = minimaxBounded(g, depth - 1, alpha, beta, false);
+            g.undo();
+            maxEval = Math.max(maxEval, evalScore);
+            alpha = Math.max(alpha, evalScore);
+            if (beta <= alpha) break;
+          } catch {
+            // Ignore invalid move attempt
+          }
+        }
+        return maxEval === -Infinity ? evaluateBoard(g) : maxEval;
+      } else {
+        let minEval = Infinity;
+        for (const m of moves) {
+          try {
+            g.move(m);
+            const evalScore = minimaxBounded(g, depth - 1, alpha, beta, true);
+            g.undo();
+            minEval = Math.min(minEval, evalScore);
+            beta = Math.min(beta, evalScore);
+            if (beta <= alpha) break;
+          } catch {
+            // Ignore invalid move attempt
+          }
+        }
+        return minEval === Infinity ? evaluateBoard(g) : minEval;
+      }
+    }
+
+    const isAIWhite = workingGame.turn() === 'w';
+    let bestMove: string = fallbackMove;
+    let bestValue = isAIWhite ? -Infinity : Infinity;
+
+    // Prioritize captures and checks for move ordering
+    possibleMoves.sort((a, b) => {
+      const aVal = a.captured ? 10 : 0;
+      const bVal = b.captured ? 10 : 0;
+      return bVal - aVal;
+    });
+
+    for (const move of possibleMoves) {
+      try {
+        workingGame.move(move);
+        const boardValue = minimaxBounded(
+          workingGame,
+          searchDepth - 1,
+          -Infinity,
+          Infinity,
+          !isAIWhite
+        );
+        workingGame.undo();
+
+        if (isAIWhite) {
+          if (boardValue > bestValue) {
+            bestValue = boardValue;
+            bestMove = move.san;
+          }
+        } else {
+          if (boardValue < bestValue) {
+            bestValue = boardValue;
+            bestMove = move.san;
+          }
+        }
+      } catch {
+        // Skip errored move
+      }
+    }
+
+    return bestMove;
+  } catch (err) {
+    console.error('getAIMove error:', err);
+    try {
+      const g = new Chess(game.fen());
+      const moves = g.moves();
+      if (moves.length > 0) {
+        return moves[Math.floor(Math.random() * moves.length)];
+      }
+    } catch {
+      // Return null if completely unmovable
+    }
+    return null;
+  }
 }

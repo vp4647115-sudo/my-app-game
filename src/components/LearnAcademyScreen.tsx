@@ -82,8 +82,15 @@ export const LearnAcademyScreen: React.FC<LearnAcademyScreenProps> = ({
       });
       const data = await res.json();
       if (data.success && data.fen) {
-        setPuzzle(data);
-        setPuzzleChess(new Chess(data.fen));
+        try {
+          const ch = new Chess(data.fen);
+          setPuzzle(data);
+          setPuzzleChess(ch);
+        } catch {
+          const defaultFen = 'r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4';
+          setPuzzle({ ...data, fen: defaultFen });
+          setPuzzleChess(new Chess(defaultFen));
+        }
       }
     } catch (err) {
       console.error(err);
@@ -422,7 +429,8 @@ export const LearnAcademyScreen: React.FC<LearnAcademyScreenProps> = ({
                           {piece && (
                             <div className="w-[82%] h-[82%]">
                               <ChessPieceSvg
-                                piece={{ type: piece.type, color: piece.color }}
+                                color={piece.color}
+                                type={piece.type}
                                 style={settings.pieceStyle}
                               />
                             </div>
@@ -546,7 +554,8 @@ export const LearnAcademyScreen: React.FC<LearnAcademyScreenProps> = ({
                         {piece && (
                           <div className="w-[82%] h-[82%]">
                             <ChessPieceSvg
-                              piece={{ type: piece.type, color: piece.color }}
+                              color={piece.color}
+                              type={piece.type}
                               style={settings.pieceStyle}
                             />
                           </div>

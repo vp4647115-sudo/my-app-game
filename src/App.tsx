@@ -30,6 +30,7 @@ import { LoginLandingScreen } from './components/LoginLandingScreen';
 import { NavDrawer } from './components/NavDrawer';
 import { ApkInstallModal } from './components/ApkInstallModal';
 import { ErpAuthModal, ErpUserSession } from './components/ErpAuthModal';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 export default function App() {
   const [user, setUser] = useState<UserProfile>(() => loadUserProfile());
@@ -265,78 +266,80 @@ export default function App() {
 
       {/* Main Screen Content */}
       <main className="relative z-10">
-        {currentScreen === 'home' && (
-          <HomeScreen
-            user={user}
-            onNavigate={handleNavigate}
-            onStartOffline={handleStartOfflineMatch}
-          />
-        )}
+        <ErrorBoundary onReset={() => setCurrentScreen('home')}>
+          {currentScreen === 'home' && (
+            <HomeScreen
+              user={user}
+              onNavigate={handleNavigate}
+              onStartOffline={handleStartOfflineMatch}
+            />
+          )}
 
-        {currentScreen === 'learn' && (
-          <LearnAcademyScreen
-            user={user}
-            settings={settings}
-            onBack={() => setCurrentScreen('home')}
-            onStartMatch={handleStartMatch}
-          />
-        )}
+          {currentScreen === 'learn' && (
+            <LearnAcademyScreen
+              user={user}
+              settings={settings}
+              onBack={() => setCurrentScreen('home')}
+              onStartMatch={handleStartMatch}
+            />
+          )}
 
-        {currentScreen === 'bot' && (
-          <BotSelectScreen
-            onStartMatch={handleStartMatch}
-            onBack={() => setCurrentScreen('home')}
-            onOpenSettings={() => handleNavigate('settings')}
-          />
-        )}
+          {currentScreen === 'bot' && (
+            <BotSelectScreen
+              onStartMatch={handleStartMatch}
+              onBack={() => setCurrentScreen('home')}
+              onOpenSettings={() => handleNavigate('settings')}
+            />
+          )}
 
-        {currentScreen === 'arena' && (
-          <ArenaScreen
-            user={user}
-            onStartMatch={handleStartMatch}
-            onBack={() => setCurrentScreen('home')}
-          />
-        )}
+          {currentScreen === 'arena' && (
+            <ArenaScreen
+              user={user}
+              onStartMatch={handleStartMatch}
+              onBack={() => setCurrentScreen('home')}
+            />
+          )}
 
-        {currentScreen === 'friend' && (
-          <FriendScreen
-            user={user}
-            onStartMatch={handleStartMatch}
-            onBack={() => setCurrentScreen('home')}
-          />
-        )}
+          {currentScreen === 'friend' && (
+            <FriendScreen
+              user={user}
+              onStartMatch={handleStartMatch}
+              onBack={() => setCurrentScreen('home')}
+            />
+          )}
 
-        {currentScreen === 'profile' && (
-          <ProfileScreen
-            user={user}
-            matchHistory={matchHistory}
-            onOpenEditModal={() => setIsEditProfileOpen(true)}
-            onUpdateProfile={handleSaveProfile}
-            onBack={currentScreen === 'profile' && activeTab === 'home' ? () => setCurrentScreen('home') : undefined}
-          />
-        )}
+          {currentScreen === 'profile' && (
+            <ProfileScreen
+              user={user}
+              matchHistory={matchHistory}
+              onOpenEditModal={() => setIsEditProfileOpen(true)}
+              onUpdateProfile={handleSaveProfile}
+              onBack={currentScreen === 'profile' && activeTab === 'home' ? () => setCurrentScreen('home') : undefined}
+            />
+          )}
 
-        {currentScreen === 'settings' && (
-          <SettingsScreen
-            user={user}
-            settings={settings}
-            onUpdateSettings={handleUpdateSettings}
-            onOpenEditProfile={() => setIsEditProfileOpen(true)}
-            onOpenApkInstall={() => setIsApkInstallOpen(true)}
-            onSignOut={handleSignOut}
-            onBack={currentScreen === 'settings' && activeTab === 'home' ? () => setCurrentScreen('home') : undefined}
-          />
-        )}
+          {currentScreen === 'settings' && (
+            <SettingsScreen
+              user={user}
+              settings={settings}
+              onUpdateSettings={handleUpdateSettings}
+              onOpenEditProfile={() => setIsEditProfileOpen(true)}
+              onOpenApkInstall={() => setIsApkInstallOpen(true)}
+              onSignOut={handleSignOut}
+              onBack={currentScreen === 'settings' && activeTab === 'home' ? () => setCurrentScreen('home') : undefined}
+            />
+          )}
 
-        {currentScreen === 'game' && activeMatch && (
-          <ChessBoardGame
-            config={activeMatch}
-            user={user}
-            settings={settings}
-            onGameComplete={handleGameComplete}
-            onExit={() => setCurrentScreen('home')}
-          />
-        )}
+          {currentScreen === 'game' && activeMatch && (
+            <ChessBoardGame
+              config={activeMatch}
+              user={user}
+              settings={settings}
+              onGameComplete={handleGameComplete}
+              onExit={() => setCurrentScreen('home')}
+            />
+          )}
+        </ErrorBoundary>
       </main>
 
       {/* Bottom Navigation Shell (Hidden during active match) */}
@@ -386,7 +389,7 @@ export default function App() {
 
       {isAuthOpen && (
         <AuthModal
-          currentEmail={user.jwtActive ? (user.username.includes('@') ? user.username : `${user.username.toLowerCase().replace(/\s+/g, '')}@sanctum.io`) : undefined}
+          currentEmail={user?.jwtActive && user?.username ? (user.username.includes('@') ? user.username : `${(user.username || '').toLowerCase().replace(/\s+/g, '')}@sanctum.io`) : undefined}
           onSuccess={(email, name, avatarUrl) => {
             const username = name || email.split('@')[0];
             const updated = {

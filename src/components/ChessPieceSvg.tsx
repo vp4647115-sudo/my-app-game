@@ -3,20 +3,23 @@ import React from 'react';
 export type PieceStyle = 'neo-grandmaster' | 'classic-staunton' | '3d-metallic' | 'minimalist';
 
 interface ChessPieceSvgProps {
-  color: 'w' | 'b';
-  type: string; // 'p', 'n', 'b', 'r', 'q', 'k'
+  color?: 'w' | 'b';
+  type?: string; // 'p', 'n', 'b', 'r', 'q', 'k'
+  piece?: { color: 'w' | 'b'; type: string };
   style?: PieceStyle;
   className?: string;
 }
 
 export const ChessPieceSvg: React.FC<ChessPieceSvgProps> = ({
-  color,
-  type,
+  color: rawColor,
+  type: rawType,
+  piece,
   style = 'neo-grandmaster',
   className,
 }) => {
-  const pType = type.toLowerCase();
-  const key = `${color}${pType}`;
+  const color = rawColor || piece?.color || 'w';
+  const type = rawType || piece?.type || 'p';
+  const pType = (type || 'p').toLowerCase();
   const isWhite = color === 'w';
 
   return (
