@@ -431,7 +431,7 @@ export const LearnAcademyScreen: React.FC<LearnAcademyScreenProps> = ({
                           onClick={() => handlePuzzleSquareClick(squareName)}
                           className={`relative flex items-center justify-center cursor-pointer select-none transition-all ${
                             isLight ? 'bg-[#eeeed2]' : 'bg-[#769656]'
-                          } ${isSelected ? 'ring-4 ring-[#D4AF37] z-10' : ''}`}
+                          } ${isSelected ? 'ring-2 ring-inset ring-[#D4AF37] z-10' : ''}`}
                         >
                           {piece && (
                             <div className="w-[82%] h-[82%]">
@@ -556,7 +556,7 @@ export const LearnAcademyScreen: React.FC<LearnAcademyScreenProps> = ({
                         onClick={() => handlePracticeSquareClick(squareName)}
                         className={`relative flex items-center justify-center cursor-pointer select-none transition-all ${
                           isLight ? 'bg-[#eeeed2]' : 'bg-[#769656]'
-                        } ${isSelected ? 'ring-4 ring-[#D4AF37] z-10' : ''}`}
+                        } ${isSelected ? 'ring-2 ring-inset ring-[#D4AF37] z-10' : ''}`}
                       >
                         {piece && (
                           <div className="w-[82%] h-[82%]">

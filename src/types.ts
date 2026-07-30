@@ -63,6 +63,23 @@ export interface ActiveMatchConfig {
   opponentCountry?: string;
   opponentPing?: number;
   rated: boolean;
+  initialFen?: string;
+  initialMoveHistory?: string[];
+  initialPlayerTime?: number;
+  initialOpponentTime?: number;
+  initialFenHistory?: string[];
+}
+
+export interface OngoingGameSession {
+  config: ActiveMatchConfig;
+  fen: string;
+  moveHistory: string[];
+  playerTime: number;
+  opponentTime: number;
+  fenHistory: string[];
+  lastMove?: { from: string; to: string } | null;
+  updatedAt: number;
+  userId: string;
 }
 
 export interface RoomConfig {

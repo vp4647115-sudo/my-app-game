@@ -66,12 +66,18 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
         {/* Avatar with GM badge and Upload Button */}
         <div className="relative shrink-0 group">
-          <div className="w-24 h-24 md:w-28 md:h-28 rounded-full border-2 border-[#FAF9F6]/20 p-1 relative overflow-hidden bg-[#1e201d]">
-            <img
-              src={user.avatarUrl}
-              alt={user.username}
-              className="w-full h-full object-cover rounded-full"
-            />
+          <div className="w-24 h-24 md:w-28 md:h-28 rounded-full border-2 border-[#D4AF37]/40 p-1 relative overflow-hidden bg-[#1e201d] flex items-center justify-center">
+            {user.avatarUrl && !user.avatarUrl.includes('googleusercontent.com') && !user.avatarUrl.includes('unsplash.com') ? (
+              <img
+                src={user.avatarUrl}
+                alt={user.username}
+                className="w-full h-full object-cover rounded-full"
+              />
+            ) : (
+              <div className="w-full h-full rounded-full bg-[#2a2d29] flex items-center justify-center text-[#D4AF37]">
+                <span className="material-symbols-outlined text-5xl md:text-6xl">person</span>
+              </div>
+            )}
             {/* Hover Camera Overlay / Upload Button */}
             <label
               htmlFor="profile-avatar-input"

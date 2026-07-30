@@ -20,6 +20,11 @@ service cloud.firestore {
       return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
 
+    // Connection test route
+    match /test/connection {
+      allow read: if true;
+    }
+
     // User profile document rules
     match /users/{userId} {
       allow get: if isSignedIn() && isValidId(userId);

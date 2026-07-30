@@ -46,7 +46,16 @@ const BISHOP_PST = [
 ];
 
 // Evaluate board position from White's perspective
-export function evaluateBoard(game: Chess): number {
+export function evaluateBoard(game: Chess, depthRemaining = 0): number {
+  if (game.isCheckmate()) {
+    // Current turn player is mated
+    return game.turn() === 'w' ? -100000 - depthRemaining : 100000 + depthRemaining;
+  }
+
+  if (game.isDraw() || game.isStalemate() || game.isThreefoldRepetition() || game.isInsufficientMaterial()) {
+    return 0;
+  }
+
   let score = 0;
   const board = game.board();
 
@@ -70,6 +79,11 @@ export function evaluateBoard(game: Chess): number {
         }
       }
     }
+  }
+
+  // Small bonus for check
+  if (game.inCheck()) {
+    score += game.turn() === 'w' ? -30 : 30;
   }
 
   return score;
@@ -145,12 +159,40 @@ export async function getAIMove(
     }
 
     let searchDepth = 1;
-    if (difficulty === 'medium' || difficulty === 'hard') searchDepth = 2;
-    else if (difficulty === 'expert' || difficulty === 'master') searchDepth = 2;
-    else if (difficulty === 'grandmaster') searchDepth = 3;
+    let MAX_NODES = 500;
+    let MAX_TIME_MS = 100;
+
+    if (difficulty === 'beginner') {
+      searchDepth = 1;
+      MAX_NODES = 200;
+      MAX_TIME_MS = 50;
+    } else if (difficulty === 'easy') {
+      searchDepth = 1;
+      MAX_NODES = 500;
+      MAX_TIME_MS = 100;
+    } else if (difficulty === 'medium') {
+      searchDepth = 2;
+      MAX_NODES = 1500;
+      MAX_TIME_MS = 200;
+    } else if (difficulty === 'hard') {
+      searchDepth = 3;
+      MAX_NODES = 4000;
+      MAX_TIME_MS = 350;
+    } else if (difficulty === 'expert') {
+      searchDepth = 3;
+      MAX_NODES = 8000;
+      MAX_TIME_MS = 500;
+    } else if (difficulty === 'master') {
+      searchDepth = 4;
+      MAX_NODES = 15000;
+      MAX_TIME_MS = 700;
+    } else if (difficulty === 'grandmaster') {
+      searchDepth = 4;
+      MAX_NODES = 30000;
+      MAX_TIME_MS = 1000;
+    }
 
     let nodesEvaluated = 0;
-    const MAX_NODES = 800;
     const startTime = Date.now();
 
     function minimaxBounded(
@@ -161,8 +203,8 @@ export async function getAIMove(
       isMaximizing: boolean
     ): number {
       nodesEvaluated++;
-      if (depth === 0 || g.isGameOver() || nodesEvaluated >= MAX_NODES || (Date.now() - startTime > 100)) {
-        return evaluateBoard(g);
+      if (depth === 0 || g.isGameOver() || nodesEvaluated >= MAX_NODES || (Date.now() - startTime > MAX_TIME_MS)) {
+        return evaluateBoard(g, depth);
       }
 
       const moves = g.moves();
@@ -212,7 +254,13 @@ export async function getAIMove(
       return bVal - aVal;
     });
 
-    for (const move of possibleMoves) {
+    for (let i = 0; i < possibleMoves.length; i++) {
+      const move = possibleMoves[i];
+      // Micro-yield to the browser event loop every 4 move evaluations so mobile UI stays 60 FPS smooth
+      if (i > 0 && i % 4 === 0) {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      }
+
       try {
         workingGame.move(move);
         const boardValue = minimaxBounded(

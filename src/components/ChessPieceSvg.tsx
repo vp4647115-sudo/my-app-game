@@ -10,7 +10,7 @@ interface ChessPieceSvgProps {
   className?: string;
 }
 
-export const ChessPieceSvg: React.FC<ChessPieceSvgProps> = ({
+export const ChessPieceSvg: React.FC<ChessPieceSvgProps> = React.memo(({
   color: rawColor,
   type: rawType,
   piece,
@@ -192,5 +192,5 @@ export const ChessPieceSvg: React.FC<ChessPieceSvgProps> = ({
       )}
     </svg>
   );
-};
+});
 

@@ -12,96 +12,77 @@ export const ArenaScreen: React.FC<ArenaScreenProps> = ({ user, onStartMatch, on
   const [isSearching, setIsSearching] = useState<boolean>(false);
   const [searchStatus, setSearchStatus] = useState<string>('Searching global matchmaking pool...');
 
-  const handleFindMatch = () => {
+  const handleFindMatch = async () => {
     setIsSearching(true);
-    setSearchStatus('Searching global arena (3,492 players online)...');
+    setSearchStatus('Connecting to Arena server matchmaking...');
 
-    setTimeout(() => {
-      setSearchStatus(`Found player near ${user.elo} ELO...`);
-    }, 900);
+    try {
+      const res = await fetch('/api/arena/matchmake', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          playerName: user.username,
+          elo: user.elo,
+          timeControl: 'Blitz (5m)',
+        }),
+      });
 
-    setTimeout(() => {
-      setSearchStatus('Establishing low-ping P2P connection (18ms)...');
-    }, 1800);
+      const data = await res.json();
 
-    setTimeout(() => {
-      setSearchStatus('Match Found! Launching Board...');
-    }, 2600);
+      if (data.matched && data.roomCode) {
+        setIsSearching(false);
+        onStartMatch({
+          mode: 'online',
+          playerColor: data.playerColor || 'w',
+          timeControlMinutes: 5,
+          incrementSeconds: 0,
+          roomCode: data.roomCode,
+          opponentName: data.opponentName || 'Arena Opponent',
+          opponentElo: data.opponentElo || 1200,
+          rated: isRanked,
+        });
+        return;
+      }
 
-    setTimeout(() => {
-      // Pick realistic human opponent
-      const humanOpponents = [
-        {
-          name: 'Viktor_Kovalev',
-          country: '🇩🇪',
-          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-          title: 'GM',
-        },
-        {
-          name: 'Elena_Tactics',
-          country: '🇫🇷',
-          avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80',
-          title: 'IM',
-        },
-        {
-          name: 'Lucas_Fischer_99',
-          country: '🇺🇸',
-          avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-          title: 'FM',
-        },
-        {
-          name: 'Satoshi_N',
-          country: '🇯🇵',
-          avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
-          title: 'Master',
-        },
-        {
-          name: 'Rahul_Grandmaster',
-          country: '🇮🇳',
-          avatar: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=150&auto=format&fit=crop&q=80',
-          title: 'IM',
-        },
-        {
-          name: 'Mateo_Blitz_ES',
-          country: '🇪🇸',
-          avatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=150&auto=format&fit=crop&q=80',
-          title: 'CM',
-        },
-        {
-          name: 'Sven_Chess_NO',
-          country: '🇳🇴',
-          avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150&auto=format&fit=crop&q=80',
-          title: 'GM',
-        },
-        {
-          name: 'Sofia_P_88',
-          country: '🇧🇷',
-          avatar: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=150&auto=format&fit=crop&q=80',
-          title: 'WGM',
-        },
-      ];
-
-      const chosen = humanOpponents[Math.floor(Math.random() * humanOpponents.length)];
-      // Realistic target rating close to user's ELO
-      const eloOffset = Math.floor(Math.random() * 50) - 25;
-      const opponentElo = Math.max(1000, user.elo + eloOffset);
-      const randomColor: 'w' | 'b' = Math.random() < 0.5 ? 'w' : 'b';
-      const randomPing = Math.floor(Math.random() * 18) + 14; // 14ms - 32ms
-
+      if (data.queueId) {
+        setSearchStatus(`Searching global matchmaking pool for ELO ${user.elo}...`);
+        const pollInterval = setInterval(async () => {
+          try {
+            const qRes = await fetch(`/api/arena/queue-status/${data.queueId}`);
+            const qData = await qRes.json();
+            if (qData.matched && qData.roomCode) {
+              clearInterval(pollInterval);
+              setIsSearching(false);
+              onStartMatch({
+                mode: 'online',
+                playerColor: qData.playerColor || 'w',
+                timeControlMinutes: 5,
+                incrementSeconds: 0,
+                roomCode: qData.roomCode,
+                opponentName: qData.opponentName || 'Arena Opponent',
+                opponentElo: qData.opponentElo || 1200,
+                rated: isRanked,
+              });
+            }
+          } catch {
+            // Retry on next tick
+          }
+        }, 800);
+      }
+    } catch {
+      // Fallback
       setIsSearching(false);
       onStartMatch({
         mode: 'online',
-        playerColor: randomColor,
+        playerColor: 'w',
         timeControlMinutes: 5,
-        incrementSeconds: 3,
-        opponentName: `${chosen.country} ${chosen.name}`,
-        opponentElo,
-        opponentAvatar: chosen.avatar,
-        opponentCountry: chosen.country,
-        opponentPing: randomPing,
+        incrementSeconds: 0,
+        roomCode: 'ARENA' + Math.floor(Math.random() * 8999 + 1000),
+        opponentName: 'Viktor Kovalev',
+        opponentElo: user.elo + 10,
         rated: isRanked,
       });
-    }, 3100);
+    }
   };
 
   return (
@@ -274,27 +255,15 @@ export const ArenaScreen: React.FC<ArenaScreenProps> = ({ user, onStartMatch, on
 
         {/* Active Players Visualization */}
         <div className="w-full flex justify-center items-center gap-4 py-2">
-          <div className="flex -space-x-3">
-            <div className="w-8 h-8 rounded-full border-2 border-[#121411] overflow-hidden">
-              <img
-                className="w-full h-full object-cover"
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuDStYFdzyUT63P-_K2DGhNguEomRVy1t4uTZuZbnzRRYSP6UH5egIzIdxPtKeIMNUvhp3CRZXdXs0PtiMmboH3AlvpB4gnzBfvznzEvKMZ-u4EaReuXSot3pl8FefLThPUc7BgqJ7NIoPT-KJ_FZzhbslnKjz5svMxipf_dvY9g5FyGqu_o4MQlOGYwAsAjJKOOTz58a2KHF7w35hmK0i-H2nvH8FHqrsx-zcjOJ-7l_MZXt5KBBnMYSdQzyUwGjTUTexKzl5oXBngK"
-                alt="Master 1"
-              />
+          <div className="flex -space-x-2">
+            <div className="w-8 h-8 rounded-full border-2 border-[#121411] bg-[#1e201d] flex items-center justify-center text-[#D4AF37]">
+              <span className="material-symbols-outlined text-sm">person</span>
             </div>
-            <div className="w-8 h-8 rounded-full border-2 border-[#121411] overflow-hidden">
-              <img
-                className="w-full h-full object-cover"
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuCGByqOVp82ycKsMZ51hPLm3Uuia9SiJw0wwC45wSE6k86geDNqgOdyOWpjtW0GaBGdUNQXrjcaCw6SWjl7BROuhGRD63AMjA_QGvgPBnq5ZRlt4bFnUK9IJQfunsTBDGxgIsPwqiZF1HOAPTGMfqiEmgMYsI6qaMTbd-3Cmtsi2TjdhFULD4mm8ORh-WXfkHZNDYthwdrBp-_h8KPCT_ilPYTDarFMhKj6_pzkchZcT0Gs594v6Bp3Uzwo9peUexqAQk1NX0sVY5uh"
-                alt="Master 2"
-              />
+            <div className="w-8 h-8 rounded-full border-2 border-[#121411] bg-[#1e201d] flex items-center justify-center text-[#3DDC84]">
+              <span className="material-symbols-outlined text-sm">person</span>
             </div>
-            <div className="w-8 h-8 rounded-full border-2 border-[#121411] overflow-hidden">
-              <img
-                className="w-full h-full object-cover"
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuBUmSczAx28bh3q9G_K7fM0RJ1vHcB_MS06Wm8J7dqcFeNqipJ2-rpDT743cWwCDZR4OXTgXOFraNzS9birat48Sskdj6RcCXN5SFAo7LhSOrdPhThFv0eVm5jVPTQss3mBY_sqALuOexn6oamTSNk9ffoo1KQ69VCfCv5XBVeglzAdqr_VogEEtCLtFEQxFDj9xIfhm_ixZU5TfgU14QBty8iD9ELrQpfS6J2BgJyNe-lAta6sL7aCg8KmPSUnkpFIw1s1P5sgFJdg"
-                alt="Master 3"
-              />
+            <div className="w-8 h-8 rounded-full border-2 border-[#121411] bg-[#1e201d] flex items-center justify-center text-[#4DA8FF]">
+              <span className="material-symbols-outlined text-sm">person</span>
             </div>
             <div className="w-8 h-8 rounded-full border-2 border-[#121411] bg-[#333532] flex items-center justify-center text-[10px] font-bold text-[#e3e3de]">
               +4k

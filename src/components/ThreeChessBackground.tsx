@@ -424,7 +424,12 @@ export const ThreeChessBackground: React.FC<ThreeChessBackgroundProps> = ({ lowP
       };
     };
 
-    const cleanup = setupScene();
+    let cleanup: (() => void) | undefined;
+    try {
+      cleanup = setupScene();
+    } catch (err) {
+      console.warn('ThreeChessBackground setup error:', err);
+    }
 
     return () => {
       if (cleanup) cleanup();

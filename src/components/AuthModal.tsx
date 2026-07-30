@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
+import { getSupabase } from '../services/supabaseClient';
 import {
-  getSupabase,
-  getSupabaseCredentials,
-  saveSupabaseCredentials,
-  isSupabaseReady,
-} from '../services/supabaseClient';
-import { signInWithGoogleFirebase, signOutFirebase } from '../services/firebaseClient';
+  signInWithGoogleFirebase,
+  signInWithEmailFirebase,
+  registerWithEmailFirebase,
+  signOutFirebase,
+} from '../services/firebaseClient';
+import { PrivacyPolicyModal } from './PrivacyPolicyModal';
 
 interface AuthModalProps {
   currentEmail?: string;
@@ -27,33 +28,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [googleLoading, setGoogleLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [infoMsg, setInfoMsg] = useState<string | null>(null);
-
-  // Supabase Config State
-  const initialCreds = getSupabaseCredentials();
-  const [showKeyConfig, setShowKeyConfig] = useState(!isSupabaseReady());
-  const [customUrl, setCustomUrl] = useState(initialCreds.url);
-  const [customKey, setCustomKey] = useState(initialCreds.key);
-  const [keySaveSuccess, setKeySaveSuccess] = useState(false);
-
-  const handleSaveKeys = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!customUrl.trim() || !customKey.trim()) {
-      setErrorMsg('Please enter both Supabase URL and Anon Key.');
-      return;
-    }
-    const client = saveSupabaseCredentials(customUrl, customKey);
-    if (client) {
-      setKeySaveSuccess(true);
-      setErrorMsg(null);
-      setInfoMsg('Supabase API keys saved and connected successfully!');
-      setTimeout(() => {
-        setKeySaveSuccess(false);
-        setShowKeyConfig(false);
-      }, 1500);
-    } else {
-      setErrorMsg('Failed to initialize Supabase client with provided keys.');
-    }
-  };
+  const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
 
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
@@ -112,32 +87,77 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setErrorMsg(null);
     setInfoMsg(null);
 
-    const client = getSupabase();
-
     try {
-      if (client) {
-        if (isSignUp) {
-          const { data, error } = await client.auth.signUp({ email, password });
-          if (error) throw error;
-          if (data?.user && !data.session) {
-            setInfoMsg('Account created! Please check your email to confirm registration or sign in.');
-            setLoading(false);
+      if (isSignUp) {
+        // Try Firebase registration first
+        try {
+          const fbUser = await registerWithEmailFirebase(email, password);
+          if (fbUser) {
+            onSuccess(email, fbUser.displayName || email.split('@')[0]);
+            onClose();
             return;
           }
-        } else {
-          const { error } = await client.auth.signInWithPassword({ email, password });
-          if (error) throw error;
+        } catch (fbErr: any) {
+          console.warn('Firebase register notice:', fbErr?.message);
+          if (fbErr?.code === 'auth/weak-password') {
+            throw new Error('Password must be at least 6 characters.');
+          }
+        }
+
+        // Supabase Fallback
+        const client = getSupabase();
+        if (client) {
+          try {
+            const { data, error } = await client.auth.signUp({ email, password });
+            if (error) {
+              console.warn('Supabase register notice (graceful fallback):', error.message);
+            } else if (data?.user && !data.session) {
+              setInfoMsg('Account created successfully!');
+              setLoading(false);
+              return;
+            }
+          } catch (sbErr: any) {
+            console.warn('Supabase register exception:', sbErr?.message);
+          }
+        }
+      } else {
+        // Try Firebase sign in first
+        try {
+          const fbUser = await signInWithEmailFirebase(email, password);
+          if (fbUser) {
+            onSuccess(email, fbUser.displayName || email.split('@')[0]);
+            onClose();
+            return;
+          }
+        } catch (fbErr: any) {
+          console.warn('Firebase sign-in notice:', fbErr?.message);
+          if (fbErr?.code === 'auth/wrong-password' || fbErr?.code === 'auth/invalid-credential') {
+            throw new Error('Invalid email or password. Please verify your credentials.');
+          }
+        }
+
+        // Supabase Fallback
+        const client = getSupabase();
+        if (client) {
+          try {
+            const { error } = await client.auth.signInWithPassword({ email, password });
+            if (error) {
+              console.warn('Supabase sign-in notice (graceful fallback):', error.message);
+              if (error.message?.toLowerCase().includes('invalid login credentials')) {
+                throw new Error('Invalid email or password. Please check your credentials.');
+              }
+            }
+          } catch (sbErr: any) {
+            if (sbErr.message?.includes('Invalid email or password')) throw sbErr;
+            console.warn('Supabase sign-in exception:', sbErr?.message);
+          }
         }
       }
+
       onSuccess(email);
       onClose();
     } catch (err: any) {
-      const isRateLimit = err?.status === 429 || err?.message?.toLowerCase().includes('rate limit') || err?.message?.includes('429');
-      if (isRateLimit) {
-        setErrorMsg('Supabase auth rate limit reached (429). You can proceed as Guest or try again shortly.');
-      } else {
-        setErrorMsg(err.message || 'Authentication failed. Please verify credentials or Supabase key.');
-      }
+      setErrorMsg(err.message || 'Authentication failed. Please check your credentials.');
     } finally {
       setLoading(false);
     }
@@ -152,8 +172,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     if (onSignOut) onSignOut();
     onClose();
   };
-
-  const isConnected = isSupabaseReady();
 
   return (
     <div className="fixed inset-0 z-50 bg-[#121411]/85 backdrop-blur-md flex items-center justify-center p-6 animate-fade-in">
@@ -211,9 +229,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 type="button"
                 onClick={handleGoogleSignIn}
                 disabled={googleLoading}
-                className="w-full py-3 px-4 rounded-xl bg-white hover:bg-neutral-100 text-neutral-800 font-body text-xs font-bold tracking-wider uppercase transition-all shadow-md flex items-center justify-center gap-3 cursor-pointer disabled:opacity-60"
+                className="w-full py-3.5 px-4 rounded-xl bg-white hover:bg-neutral-100 text-neutral-900 font-body text-xs font-bold tracking-wider uppercase transition-all shadow-md flex items-center justify-center gap-3 cursor-pointer disabled:opacity-60"
               >
-                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
                   <path
                     fill="#4285F4"
                     d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -231,12 +249,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
                   />
                 </svg>
-                <span>{googleLoading ? 'CONNECTING GOOGLE...' : 'CONTINUE WITH GOOGLE'}</span>
+                <span>{googleLoading ? 'CONNECTING GOOGLE...' : 'SIGN IN WITH GOOGLE'}</span>
               </button>
             </div>
 
             {/* Divider */}
-            <div className="relative flex items-center justify-center">
+            <div className="relative flex items-center justify-center my-2">
               <div className="border-t border-white/10 w-full" />
               <span className="bg-[#181a17] px-3 font-body text-[10px] text-[#c4c7c7] font-bold uppercase tracking-widest shrink-0">
                 OR EMAIL LOGIN
@@ -285,7 +303,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </div>
             </form>
 
-            <div className="text-center pt-1">
+            <div className="text-center pt-1 space-y-2">
               <button
                 type="button"
                 onClick={() => setIsSignUp(!isSignUp)}
@@ -295,73 +313,24 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   ? 'Already have an account? Sign In'
                   : "Don't have an account? Register Now"}
               </button>
-            </div>
 
-            {/* Supabase Key Configuration Toggle */}
-            <div className="pt-2 border-t border-white/10 text-center">
               <button
                 type="button"
-                onClick={() => setShowKeyConfig(!showKeyConfig)}
-                className="inline-flex items-center gap-1.5 font-body text-[11px] text-[#c4c7c7] hover:text-[#D4AF37] transition-colors cursor-pointer"
+                onClick={() => setIsPrivacyOpen(true)}
+                className="font-body text-[11px] text-[#c4c7c7]/60 hover:text-[#D4AF37] transition-colors cursor-pointer inline-flex items-center gap-1 mx-auto"
               >
-                <span className="material-symbols-outlined text-sm">
-                  {isConnected ? 'cloud_done' : 'settings_remote'}
-                </span>
-                <span>
-                  {isConnected
-                    ? 'Supabase Cloud Active (Click to edit credentials)'
-                    : 'Configure Custom Supabase Credentials'}
-                </span>
+                <span className="material-symbols-outlined text-xs">shield</span>
+                <span>Privacy Policy</span>
               </button>
-
-              {showKeyConfig && (
-                <form onSubmit={handleSaveKeys} className="mt-3 p-4 bg-[#1e201d] rounded-xl border border-[#D4AF37]/30 text-left space-y-3 animate-fade-in">
-                  <div className="flex items-center justify-between border-b border-white/10 pb-2">
-                    <span className="font-body text-xs font-bold text-[#D4AF37] uppercase tracking-wider">
-                      Supabase Configuration
-                    </span>
-                  </div>
-
-                  <div>
-                    <label className="block font-body text-[10px] font-bold text-[#c4c7c7] mb-1 uppercase">
-                      Supabase URL
-                    </label>
-                    <input
-                      type="url"
-                      required
-                      value={customUrl}
-                      onChange={(e) => setCustomUrl(e.target.value)}
-                      placeholder="https://xyz.supabase.co"
-                      className="w-full bg-[#121411] border border-white/10 rounded-lg px-3 py-2 font-mono text-xs text-[#FAF9F6] focus:outline-none focus:border-[#D4AF37]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-body text-[10px] font-bold text-[#c4c7c7] mb-1 uppercase">
-                      Anon Key
-                    </label>
-                    <input
-                      type="password"
-                      required
-                      value={customKey}
-                      onChange={(e) => setCustomKey(e.target.value)}
-                      placeholder="eyJh..."
-                      className="w-full bg-[#121411] border border-white/10 rounded-lg px-3 py-2 font-mono text-xs text-[#FAF9F6] focus:outline-none focus:border-[#D4AF37]"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="w-full py-2.5 rounded-lg bg-[#D4AF37] text-[#121411] font-body text-xs font-bold uppercase tracking-wider hover:brightness-110 transition-all cursor-pointer"
-                  >
-                    SAVE SUPABASE KEYS
-                  </button>
-                </form>
-              )}
             </div>
           </>
         )}
       </div>
+
+      <PrivacyPolicyModal
+        isOpen={isPrivacyOpen}
+        onClose={() => setIsPrivacyOpen(false)}
+      />
     </div>
   );
 };

@@ -60,11 +60,17 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ user, onSave
               Profile Picture / Avatar
             </label>
             <div className="flex items-center gap-4 bg-[#1e201d] p-3 rounded-xl border border-white/10">
-              <img
-                src={avatarUrl}
-                alt="Avatar preview"
-                className="w-14 h-14 rounded-full object-cover border-2 border-[#D4AF37]/50 shrink-0"
-              />
+              <div className="w-14 h-14 rounded-full border-2 border-[#D4AF37]/50 shrink-0 bg-[#2a2d29] flex items-center justify-center overflow-hidden">
+                {avatarUrl && !avatarUrl.includes('googleusercontent.com') && !avatarUrl.includes('unsplash.com') ? (
+                  <img
+                    src={avatarUrl}
+                    alt="Avatar preview"
+                    className="w-full h-full object-cover rounded-full"
+                  />
+                ) : (
+                  <span className="material-symbols-outlined text-3xl text-[#D4AF37]">person</span>
+                )}
+              </div>
               <div className="flex-1 min-w-0">
                 <label
                   htmlFor="edit-modal-avatar-upload"

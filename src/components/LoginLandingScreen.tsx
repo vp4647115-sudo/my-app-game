@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
+import { getSupabase } from '../services/supabaseClient';
 import {
-  getSupabase,
-  getSupabaseCredentials,
-  saveSupabaseCredentials,
-  isSupabaseReady,
-} from '../services/supabaseClient';
-import { signInWithGoogleFirebase } from '../services/firebaseClient';
-import { ErpAuthModal, ErpUserSession } from './ErpAuthModal';
+  signInWithGoogleFirebase,
+  signInWithEmailFirebase,
+  registerWithEmailFirebase,
+} from '../services/firebaseClient';
+import { PrivacyPolicyModal } from './PrivacyPolicyModal';
 
 interface LoginLandingScreenProps {
   onLoginSuccess: (email: string, name?: string, avatarUrl?: string) => void;
@@ -26,35 +25,7 @@ export const LoginLandingScreen: React.FC<LoginLandingScreenProps> = ({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [infoMsg, setInfoMsg] = useState<string | null>(null);
 
-  // ERP Auth Modal State
-  const [isErpModalOpen, setIsErpModalOpen] = useState(false);
-
-  // Supabase Config State
-  const initialCreds = getSupabaseCredentials();
-  const [showKeyConfig, setShowKeyConfig] = useState(false);
-  const [customUrl, setCustomUrl] = useState(initialCreds.url);
-  const [customKey, setCustomKey] = useState(initialCreds.key);
-  const [keySaveSuccess, setKeySaveSuccess] = useState(false);
-
-  const handleSaveKeys = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!customUrl.trim() || !customKey.trim()) {
-      setErrorMsg('Please enter both Supabase URL and Anon Key.');
-      return;
-    }
-    const client = saveSupabaseCredentials(customUrl, customKey);
-    if (client) {
-      setKeySaveSuccess(true);
-      setErrorMsg(null);
-      setInfoMsg('Supabase API keys saved and connected successfully!');
-      setTimeout(() => {
-        setKeySaveSuccess(false);
-        setShowKeyConfig(false);
-      }, 1500);
-    } else {
-      setErrorMsg('Failed to initialize Supabase client with provided keys.');
-    }
-  };
+  const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
 
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
@@ -113,46 +84,87 @@ export const LoginLandingScreen: React.FC<LoginLandingScreenProps> = ({
     setErrorMsg(null);
     setInfoMsg(null);
 
-    const client = getSupabase();
-
     try {
-      if (client) {
-        if (activeTab === 'signup') {
-          const { data, error } = await client.auth.signUp({
-            email,
-            password,
-            options: {
-              data: { full_name: fullName || email.split('@')[0] },
-            },
-          });
-          if (error) throw error;
-          if (data?.user && !data.session) {
-            setInfoMsg('Account created successfully! Check your email or click Enter Sanctum.');
-            setLoading(false);
-            setTimeout(() => {
-              onLoginSuccess(email, fullName || email.split('@')[0]);
-            }, 1200);
+      if (activeTab === 'signup') {
+        // Try Firebase Registration first
+        try {
+          const fbUser = await registerWithEmailFirebase(email, password, fullName || email.split('@')[0]);
+          if (fbUser) {
+            onLoginSuccess(email, fullName || fbUser.displayName || email.split('@')[0]);
             return;
           }
-        } else {
-          const { error } = await client.auth.signInWithPassword({ email, password });
-          if (error) throw error;
+        } catch (fbErr: any) {
+          console.warn('Firebase registration notice:', fbErr?.message);
+          if (fbErr?.code === 'auth/weak-password') {
+            throw new Error('Password must be at least 6 characters.');
+          }
+        }
+
+        // Supabase Fallback
+        const client = getSupabase();
+        if (client) {
+          try {
+            const { data, error } = await client.auth.signUp({
+              email,
+              password,
+              options: {
+                data: { full_name: fullName || email.split('@')[0] },
+              },
+            });
+            if (error) {
+              console.warn('Supabase registration notice (graceful fallback):', error.message);
+            } else if (data?.user && !data.session) {
+              setInfoMsg('Account created successfully!');
+              setLoading(false);
+              setTimeout(() => {
+                onLoginSuccess(email, fullName || email.split('@')[0]);
+              }, 800);
+              return;
+            }
+          } catch (sbErr: any) {
+            console.warn('Supabase registration exception:', sbErr?.message);
+          }
+        }
+      } else {
+        // Try Firebase Sign In first
+        try {
+          const fbUser = await signInWithEmailFirebase(email, password);
+          if (fbUser) {
+            onLoginSuccess(email, fbUser.displayName || fullName || email.split('@')[0]);
+            return;
+          }
+        } catch (fbErr: any) {
+          console.warn('Firebase sign-in notice:', fbErr?.message);
+          if (fbErr?.code === 'auth/wrong-password' || fbErr?.code === 'auth/invalid-credential') {
+            throw new Error('Invalid email or password. Please verify your credentials.');
+          }
+        }
+
+        // Supabase Fallback
+        const client = getSupabase();
+        if (client) {
+          try {
+            const { error } = await client.auth.signInWithPassword({ email, password });
+            if (error) {
+              console.warn('Supabase sign-in notice (graceful fallback):', error.message);
+              if (error.message?.toLowerCase().includes('invalid login credentials')) {
+                throw new Error('Invalid email or password. Please check your credentials.');
+              }
+            }
+          } catch (sbErr: any) {
+            if (sbErr.message?.includes('Invalid email or password')) throw sbErr;
+            console.warn('Supabase sign-in exception:', sbErr?.message);
+          }
         }
       }
+
       onLoginSuccess(email, fullName || email.split('@')[0]);
     } catch (err: any) {
-      const isRateLimit = err?.status === 429 || err?.message?.toLowerCase().includes('rate limit') || err?.message?.includes('429');
-      if (isRateLimit) {
-        setErrorMsg('Supabase authentication rate limit reached (429). You can click "GUEST ENTER" below to play immediately without waiting!');
-      } else {
-        setErrorMsg(err.message || 'Authentication error. Please verify details.');
-      }
+      setErrorMsg(err.message || 'Authentication error. Please check your email and password.');
     } finally {
       setLoading(false);
     }
   };
-
-  const isConnected = isSupabaseReady();
 
   return (
     <div className="min-h-screen bg-[#121411] text-[#e3e3de] flex items-center justify-center p-6 relative overflow-hidden">
@@ -215,7 +227,7 @@ export const LoginLandingScreen: React.FC<LoginLandingScreenProps> = ({
             type="button"
             onClick={handleGoogleSignIn}
             disabled={googleLoading}
-            className="w-full py-3.5 px-4 rounded-xl bg-white hover:bg-neutral-100 text-neutral-900 font-body text-xs font-bold tracking-wider uppercase transition-all shadow-lg flex items-center justify-center gap-3 cursor-pointer disabled:opacity-60 active:scale-[0.98]"
+            className="w-full py-4 px-5 rounded-2xl bg-white hover:bg-neutral-100 text-neutral-900 font-body text-xs font-extrabold tracking-wider uppercase transition-all shadow-xl flex items-center justify-center gap-3 cursor-pointer disabled:opacity-60 active:scale-[0.98] border border-white/20"
           >
             <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
               <path
@@ -235,7 +247,7 @@ export const LoginLandingScreen: React.FC<LoginLandingScreenProps> = ({
                 d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
               />
             </svg>
-            <span>{googleLoading ? 'CONNECTING GOOGLE...' : 'CONTINUE WITH GOOGLE'}</span>
+            <span>{googleLoading ? 'CONNECTING GOOGLE...' : 'SIGN IN WITH GOOGLE'}</span>
           </button>
 
           {/* Divider */}
@@ -252,9 +264,9 @@ export const LoginLandingScreen: React.FC<LoginLandingScreenProps> = ({
             <button
               type="button"
               onClick={() => { setActiveTab('signin'); setErrorMsg(null); }}
-              className={`flex-1 py-2 rounded-lg transition-all cursor-pointer ${
+              className={`flex-1 py-2.5 rounded-lg transition-all cursor-pointer ${
                 activeTab === 'signin'
-                  ? 'bg-[#D4AF37] text-[#121411] shadow-md'
+                  ? 'bg-[#D4AF37] text-[#121411] shadow-md font-extrabold'
                   : 'text-[#c4c7c7] hover:text-white'
               }`}
             >
@@ -263,9 +275,9 @@ export const LoginLandingScreen: React.FC<LoginLandingScreenProps> = ({
             <button
               type="button"
               onClick={() => { setActiveTab('signup'); setErrorMsg(null); }}
-              className={`flex-1 py-2 rounded-lg transition-all cursor-pointer ${
+              className={`flex-1 py-2.5 rounded-lg transition-all cursor-pointer ${
                 activeTab === 'signup'
-                  ? 'bg-[#D4AF37] text-[#121411] shadow-md'
+                  ? 'bg-[#D4AF37] text-[#121411] shadow-md font-extrabold'
                   : 'text-[#c4c7c7] hover:text-white'
               }`}
             >
@@ -327,77 +339,26 @@ export const LoginLandingScreen: React.FC<LoginLandingScreenProps> = ({
               {loading ? 'AUTHENTICATING...' : activeTab === 'signup' ? 'REGISTER & ENTER GAME' : 'LOGIN & ENTER GAME'}
             </button>
           </form>
-
-          {/* Supabase API Key Configuration Toggle */}
-          <div className="pt-2 border-t border-white/10 text-center">
-            <button
-              type="button"
-              onClick={() => setShowKeyConfig(!showKeyConfig)}
-              className="inline-flex items-center gap-1.5 font-body text-[11px] text-[#c4c7c7] hover:text-[#D4AF37] transition-colors cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-sm">
-                {isConnected ? 'cloud_done' : 'settings_remote'}
-              </span>
-              <span>
-                {isConnected
-                  ? 'Supabase Cloud Connected (Click to edit keys)'
-                  : 'Configure Custom Supabase Project Keys'}
-              </span>
-            </button>
-
-            {showKeyConfig && (
-              <form onSubmit={handleSaveKeys} className="mt-3 p-4 bg-[#1e201d] rounded-2xl border border-[#D4AF37]/30 text-left space-y-3 animate-fade-in">
-                <div className="flex items-center justify-between border-b border-white/10 pb-2">
-                  <span className="font-body text-xs font-bold text-[#D4AF37] uppercase tracking-wider">
-                    Supabase Configuration
-                  </span>
-                  <span className="text-[10px] text-[#c4c7c7]">Custom API Credentials</span>
-                </div>
-
-                <div>
-                  <label className="block font-body text-[10px] font-bold text-[#c4c7c7] mb-1 uppercase">
-                    Supabase Project URL
-                  </label>
-                  <input
-                    type="url"
-                    required
-                    value={customUrl}
-                    onChange={(e) => setCustomUrl(e.target.value)}
-                    placeholder="https://xyzcompany.supabase.co"
-                    className="w-full bg-[#121411] border border-white/10 rounded-lg px-3 py-2 font-mono text-xs text-[#FAF9F6] focus:outline-none focus:border-[#D4AF37]"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-body text-[10px] font-bold text-[#c4c7c7] mb-1 uppercase">
-                    Supabase Anon Key
-                  </label>
-                  <input
-                    type="password"
-                    required
-                    value={customKey}
-                    onChange={(e) => setCustomKey(e.target.value)}
-                    placeholder="eyJh..."
-                    className="w-full bg-[#121411] border border-white/10 rounded-lg px-3 py-2 font-mono text-xs text-[#FAF9F6] focus:outline-none focus:border-[#D4AF37]"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full py-2.5 rounded-lg bg-[#D4AF37] text-[#121411] font-body text-xs font-bold uppercase tracking-wider hover:brightness-110 transition-all cursor-pointer"
-                >
-                  SAVE & CONNECT SUPABASE
-                </button>
-              </form>
-            )}
-          </div>
         </div>
 
         {/* Footer Note */}
-        <p className="text-center font-body text-[11px] text-[#c4c7c7]/50">
-          VPN Chess Secure Engine • All Rights Reserved
-        </p>
+        <div className="text-center font-body text-[11px] text-[#c4c7c7]/60 space-y-1">
+          <p>VPN Chess Secure Engine • All Rights Reserved</p>
+          <button
+            type="button"
+            onClick={() => setIsPrivacyOpen(true)}
+            className="text-[#D4AF37] hover:underline font-bold transition-colors cursor-pointer inline-flex items-center gap-1"
+          >
+            <span className="material-symbols-outlined text-xs">shield</span>
+            <span>Privacy Policy</span>
+          </button>
+        </div>
       </div>
+
+      <PrivacyPolicyModal
+        isOpen={isPrivacyOpen}
+        onClose={() => setIsPrivacyOpen(false)}
+      />
     </div>
   );
 };

@@ -3,6 +3,9 @@ import {
   getAuth,
   GoogleAuthProvider,
   signInWithPopup,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  updateProfile,
   signOut as firebaseSignOut,
   onAuthStateChanged,
   User,
@@ -19,12 +22,26 @@ import {
   orderBy,
   limit,
 } from 'firebase/firestore';
-import firebaseConfig from '../../firebase-applet-config.json';
+import firebaseConfigRaw from '../../firebase-applet-config.json';
 import { UserProfile, MatchHistoryItem } from '../types';
 
+// Support environment variables with fallback to config json
+const resolvedFirebaseConfig = {
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || firebaseConfigRaw.projectId,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || firebaseConfigRaw.appId,
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || firebaseConfigRaw.apiKey,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || firebaseConfigRaw.authDomain,
+  firestoreDatabaseId: import.meta.env.VITE_FIREBASE_FIRESTORE_DATABASE_ID || firebaseConfigRaw.firestoreDatabaseId,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || firebaseConfigRaw.storageBucket,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || firebaseConfigRaw.messagingSenderId,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || (firebaseConfigRaw as Record<string, string>).measurementId || '',
+  oAuthClientId: import.meta.env.VITE_FIREBASE_OAUTH_CLIENT_ID || (firebaseConfigRaw as Record<string, string>).oAuthClientId || '',
+  recaptchaSiteKey: import.meta.env.VITE_FIREBASE_RECAPTCHA_SITE_KEY || (firebaseConfigRaw as Record<string, string>).recaptchaSiteKey || '',
+};
+
 // Initialize Firebase App & Firestore with databaseId
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+const app = getApps().length === 0 ? initializeApp(resolvedFirebaseConfig) : getApp();
+export const db = getFirestore(app, resolvedFirebaseConfig.firestoreDatabaseId);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 
@@ -33,9 +50,7 @@ async function testConnection() {
   try {
     await getDocFromServer(doc(db, 'test', 'connection'));
   } catch (error) {
-    if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.warn('Firebase client offline or connecting...');
-    }
+    console.warn('Firebase connection test info:', error instanceof Error ? error.message : error);
   }
 }
 testConnection();
@@ -85,16 +100,82 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     path,
   };
   console.error('Firestore Error: ', JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
+  return errInfo;
 }
 
-// Google Sign-In with popup
+// Google Sign-In with popup & COOP protection
 export async function signInWithGoogleFirebase() {
+  if (typeof window === 'undefined') return null;
+
+  const originalOpen = window.open;
+  let popupWin: Window | null = null;
+  let isClosed = false;
+
+  const handleFocus = () => {
+    if (popupWin) {
+      try {
+        if (popupWin.closed) {
+          isClosed = true;
+        }
+      } catch (e) {
+        isClosed = true;
+      }
+    }
+  };
+
   try {
+    window.open = function (...args) {
+      const win = originalOpen.apply(window, args);
+      if (!win) return win;
+      popupWin = win;
+      isClosed = false;
+
+      window.addEventListener('focus', handleFocus);
+
+      return new Proxy(win, {
+        get(target, prop, receiver) {
+          if (prop === 'closed') {
+            return isClosed;
+          }
+          const value = Reflect.get(target, prop, receiver);
+          return typeof value === 'function' ? value.bind(target) : value;
+        },
+      });
+    };
+
     const result = await signInWithPopup(auth, googleProvider);
     return result.user;
-  } catch (error) {
-    console.error('Firebase Google Sign-In Error:', error);
+  } catch (error: any) {
+    console.warn('Firebase Google Sign-In notice:', error?.message || error);
+    throw error;
+  } finally {
+    isClosed = true;
+    window.removeEventListener('focus', handleFocus);
+    window.open = originalOpen;
+  }
+}
+
+// Email/Password Sign-In
+export async function signInWithEmailFirebase(email: string, pass: string) {
+  try {
+    const res = await signInWithEmailAndPassword(auth, email, pass);
+    return res.user;
+  } catch (error: any) {
+    console.warn('Firebase Email Sign-In notice:', error?.message || error);
+    throw error;
+  }
+}
+
+// Email/Password Registration
+export async function registerWithEmailFirebase(email: string, pass: string, displayName?: string) {
+  try {
+    const res = await createUserWithEmailAndPassword(auth, email, pass);
+    if (displayName && res.user) {
+      await updateProfile(res.user, { displayName });
+    }
+    return res.user;
+  } catch (error: any) {
+    console.warn('Firebase Registration notice:', error?.message || error);
     throw error;
   }
 }

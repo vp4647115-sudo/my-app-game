@@ -8,7 +8,6 @@ interface NavDrawerProps {
   onNavigate: (screen: 'home' | 'bot' | 'arena' | 'friend' | 'profile' | 'settings' | 'learn') => void;
   onStartOffline: () => void;
   onOpenAuth: () => void;
-  onOpenErpAuth?: () => void;
   onOpenApkInstall?: () => void;
   onOpenGuide?: () => void;
   onSignOut: () => void;
@@ -21,7 +20,6 @@ export const NavDrawer: React.FC<NavDrawerProps> = ({
   onNavigate,
   onStartOffline,
   onOpenAuth,
-  onOpenErpAuth,
   onOpenApkInstall,
   onOpenGuide,
   onSignOut,
@@ -66,8 +64,12 @@ export const NavDrawer: React.FC<NavDrawerProps> = ({
             }}
             className="glass-panel p-3.5 rounded-xl flex items-center gap-3 mb-6 border border-[#D4AF37]/20 hover:border-[#D4AF37]/50 cursor-pointer transition-all active:scale-[0.98]"
           >
-            <div className="w-10 h-10 rounded-full border border-[#D4AF37] overflow-hidden shrink-0">
-              <img src={user.avatarUrl} alt={user.username} className="w-full h-full object-cover" />
+            <div className="w-10 h-10 rounded-full border border-[#D4AF37] overflow-hidden shrink-0 bg-[#1e201d] flex items-center justify-center">
+              {user.avatarUrl && !user.avatarUrl.includes('googleusercontent.com') && !user.avatarUrl.includes('unsplash.com') ? (
+                <img src={user.avatarUrl} alt={user.username} className="w-full h-full object-cover" />
+              ) : (
+                <span className="material-symbols-outlined text-xl text-[#D4AF37]">person</span>
+              )}
             </div>
             <div className="flex-1 min-w-0">
               <h4 className="font-headline text-sm font-bold text-[#FAF9F6] truncate">
@@ -172,22 +174,6 @@ export const NavDrawer: React.FC<NavDrawerProps> = ({
               <span className="material-symbols-outlined text-[#D4AF37] text-xl">settings</span>
               <span>App Settings & Audio</span>
             </button>
-
-            {onOpenErpAuth && (
-              <button
-                onClick={() => {
-                  onOpenErpAuth();
-                  onClose();
-                }}
-                className="w-full flex items-center gap-3.5 px-4 py-3 rounded-xl bg-[#D4AF37]/20 hover:bg-[#D4AF37]/30 border border-[#D4AF37]/50 text-[#FAF9F6] transition-colors text-left cursor-pointer active:scale-[0.98]"
-              >
-                <span className="material-symbols-outlined text-[#D4AF37] text-xl">account_balance</span>
-                <div className="flex flex-col">
-                  <span className="font-bold text-xs">Enterprise ERP Auth</span>
-                  <span className="text-[9px] text-[#D4AF37]">Argon2id + TOTP Algorithm</span>
-                </div>
-              </button>
-            )}
 
             <button
               onClick={() => {

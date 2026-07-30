@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Chess, Square, PieceSymbol, Color } from 'chess.js';
 import { animate, stagger } from 'animejs';
-import { ActiveMatchConfig, UserProfile, GameSettings, MatchHistoryItem } from '../types';
+import { ActiveMatchConfig, UserProfile, GameSettings, MatchHistoryItem, OngoingGameSession } from '../types';
 import { getAIMove, evaluateBoard } from '../services/aiEngine';
 import { soundService } from '../services/sound';
 import { useChessAudio } from '../hooks/useChessAudio';
@@ -22,12 +22,21 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
   onGameComplete,
   onExit,
 }) => {
-  const [game, setGame] = useState<Chess>(() => new Chess());
+  const [game, setGame] = useState<Chess>(() => {
+    if (config.initialFen) {
+      try {
+        return new Chess(config.initialFen);
+      } catch (err) {
+        console.warn('Failed to parse initial FEN:', err);
+      }
+    }
+    return new Chess();
+  });
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
   const [validMoves, setValidMoves] = useState<Square[]>([]);
   const [lastMove, setLastMove] = useState<{ from: Square; to: Square } | null>(null);
   const [isBotThinking, setIsBotThinking] = useState<boolean>(false);
-  const [moveHistory, setMoveHistory] = useState<string[]>([]);
+  const [moveHistory, setMoveHistory] = useState<string[]>(config.initialMoveHistory || []);
   const [gameOverResult, setGameOverResult] = useState<{
     result: 'WIN' | 'LOSS' | 'DRAW';
     reason: string;
@@ -43,11 +52,45 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
   );
   const [showStyleMenu, setShowStyleMenu] = useState<boolean>(false);
 
+  // FEN history and Redo stack for robust Undo/Redo
+  const [fenHistory, setFenHistory] = useState<string[]>(
+    config.initialFenHistory && config.initialFenHistory.length > 0
+      ? config.initialFenHistory
+      : [game.fen()]
+  );
+  const [redoStack, setRedoStack] = useState<string[]>([]);
+
   // Clocks in seconds
-  const [playerTime, setPlayerTime] = useState<number>(config.timeControlMinutes * 60);
-  const [opponentTime, setOpponentTime] = useState<number>(config.timeControlMinutes * 60);
+  const [playerTime, setPlayerTime] = useState<number>(
+    config.initialPlayerTime ?? config.timeControlMinutes * 60
+  );
+  const [opponentTime, setOpponentTime] = useState<number>(
+    config.initialOpponentTime ?? config.timeControlMinutes * 60
+  );
   const [moveDuration, setMoveDuration] = useState<number>(0);
   const [totalMatchSeconds, setTotalMatchSeconds] = useState<number>(0);
+
+  // Auto-save live ongoing match session to localStorage for crash/reconnect recovery
+  useEffect(() => {
+    if (gameOverResult) {
+      localStorage.removeItem('vpn_chess_ongoing_session');
+      return;
+    }
+
+    const sessionData: OngoingGameSession = {
+      config,
+      fen: game.fen(),
+      moveHistory,
+      playerTime,
+      opponentTime,
+      fenHistory,
+      lastMove,
+      updatedAt: Date.now(),
+      userId: user.id || 'guest',
+    };
+
+    localStorage.setItem('vpn_chess_ongoing_session', JSON.stringify(sessionData));
+  }, [game, moveHistory, playerTime, opponentTime, fenHistory, lastMove, gameOverResult, config, user.id]);
 
   const playerColor: Color = config.playerColor;
 
@@ -77,6 +120,9 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
 
   // Ref to ensure Bot doesn't trigger multiple times
   const botMovingRef = useRef<boolean>(false);
+
+  // Ref to prevent overlapping network polls on mobile
+  const isSyncingRef = useRef<boolean>(false);
 
   // Timestamp delta tracker for exact clock calculation across background tabs
   const lastTickTimeRef = useRef<number>(Date.now());
@@ -173,6 +219,7 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
       else if (result === 'LOSS') eloChange = config.rated ? -10 : 0;
 
       playSnd('end', result === 'WIN');
+      localStorage.removeItem('vpn_chess_ongoing_session');
       setGameOverResult({ result, reason, eloChange });
       onGameComplete(result, eloChange, game.pgn());
     },
@@ -210,11 +257,13 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
     [playerColor, handleGameOver, playSnd]
   );
 
-  // Real-time friend room state sync (polling every 800ms safely)
+  // Real-time room state sync (polling every 800ms safely without request stacking)
   useEffect(() => {
-    if (config.mode !== 'friend' || !config.roomCode || gameOverResult) return;
+    if ((config.mode !== 'friend' && config.mode !== 'online') || !config.roomCode || gameOverResult) return;
 
     const syncRoom = async () => {
+      if (isSyncingRef.current) return;
+      isSyncingRef.current = true;
       try {
         const res = await fetch(`/api/rooms/${config.roomCode}`);
         if (!res.ok) return;
@@ -233,6 +282,8 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
         }
       } catch (err) {
         // Catch silently to prevent unhandled rejection console noise
+      } finally {
+        isSyncingRef.current = false;
       }
     };
 
@@ -306,7 +357,7 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
   useEffect(() => {
     if (gameOverResult) return;
 
-    const isBotOrOnlineMode = config.mode === 'bot' || config.mode === 'online';
+    const isBotOrOnlineMode = config.mode === 'bot' || (config.mode === 'online' && !config.roomCode);
 
     if (!isPlayerTurn && isBotOrOnlineMode && !botMovingRef.current) {
       botMovingRef.current = true;
@@ -343,6 +394,8 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
             const moveRes = copy.move(aiSan);
             if (moveRes) {
               setGame(copy);
+              setFenHistory((prev) => [...prev, copy.fen()]);
+              setRedoStack([]);
               setLastMove({ from: moveRes.from, to: moveRes.to });
               setMoveHistory(copy.history());
               setMoveDuration(0);
@@ -384,6 +437,8 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
       if (moveRes) {
         activeGameIdRef.current++;
         setGame(copy);
+        setFenHistory((prev) => [...prev, copy.fen()]);
+        setRedoStack([]);
         setLastMove({ from, to });
         setMoveHistory(copy.history());
         setSelectedSquare(null);
@@ -397,8 +452,8 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
 
         checkGameEndConditions(copy);
 
-        // If playing in friend mode, post move to room
-        if (config.mode === 'friend' && config.roomCode) {
+        // If playing in friend or online room mode, post move to room
+        if ((config.mode === 'friend' || config.mode === 'online') && config.roomCode) {
           fetch('/api/rooms/move', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -479,7 +534,7 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
 
   // Undo Move
   const handleUndo = () => {
-    if (moveHistory.length === 0 || gameOverResult) return;
+    if (fenHistory.length <= 1 || gameOverResult) return;
     if (config.mode === 'online' || config.mode === 'friend') {
       setTurnNotice('Undo is not available in live online matches!');
       setTimeout(() => setTurnNotice(null), 2500);
@@ -489,13 +544,72 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
     botMovingRef.current = false;
     setIsBotThinking(false);
     setPendingPromotion(null);
-    const copy = new Chess(game.fen());
-    copy.undo(); // Undo AI move
-    if (config.mode === 'bot') copy.undo(); // Undo Player move
-    setGame(copy);
-    setMoveHistory(copy.history());
+
+    let stepsToUndo = 1;
+    // In bot mode, undo both bot move and player move if available
+    if (config.mode === 'bot' && fenHistory.length >= 3) {
+      stepsToUndo = 2;
+    }
+
+    const historyCopy = [...fenHistory];
+    const poppedFens: string[] = [];
+    for (let i = 0; i < stepsToUndo; i++) {
+      if (historyCopy.length > 1) {
+        const popped = historyCopy.pop()!;
+        poppedFens.unshift(popped);
+      }
+    }
+
+    const previousFen = historyCopy[historyCopy.length - 1];
+    const updatedGame = new Chess(previousFen);
+
+    setGame(updatedGame);
+    setFenHistory(historyCopy);
+    setRedoStack((prev) => [...poppedFens, ...prev]);
+    setMoveHistory(updatedGame.history());
     setSelectedSquare(null);
     setValidMoves([]);
+    setLastMove(null);
+    playSnd('move');
+  };
+
+  // Redo Move
+  const handleRedo = () => {
+    if (redoStack.length === 0 || gameOverResult) return;
+    if (config.mode === 'online' || config.mode === 'friend') {
+      setTurnNotice('Redo is not available in live online matches!');
+      setTimeout(() => setTurnNotice(null), 2500);
+      return;
+    }
+    activeGameIdRef.current++;
+    botMovingRef.current = false;
+    setIsBotThinking(false);
+    setPendingPromotion(null);
+
+    let stepsToRedo = 1;
+    // In bot mode, redo both player move and bot move if available
+    if (config.mode === 'bot' && redoStack.length >= 2) {
+      stepsToRedo = 2;
+    }
+
+    const redoCopy = [...redoStack];
+    const redoneFens: string[] = [];
+    for (let i = 0; i < stepsToRedo; i++) {
+      if (redoCopy.length > 0) {
+        redoneFens.push(redoCopy.shift()!);
+      }
+    }
+
+    const nextFen = redoneFens[redoneFens.length - 1];
+    const updatedGame = new Chess(nextFen);
+
+    setGame(updatedGame);
+    setFenHistory((prev) => [...prev, ...redoneFens]);
+    setRedoStack(redoCopy);
+    setMoveHistory(updatedGame.history());
+    setSelectedSquare(null);
+    setValidMoves([]);
+    setLastMove(null);
     playSnd('move');
   };
 
@@ -507,6 +621,8 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
     setPendingPromotion(null);
     const newG = new Chess();
     setGame(newG);
+    setFenHistory([newG.fen()]);
+    setRedoStack([]);
     setSelectedSquare(null);
     setValidMoves([]);
     setLastMove(null);
@@ -529,6 +645,8 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
         const moveRes = copy.move(aiSan);
         if (moveRes) {
           setGame(copy);
+          setFenHistory((prev) => [...prev, copy.fen()]);
+          setRedoStack([]);
           setLastMove({ from: moveRes.from, to: moveRes.to });
           setMoveHistory(copy.history());
           setMoveDuration(0);
@@ -715,15 +833,18 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
         )}
 
         <div className="flex items-center gap-2.5">
-          <div className="relative shrink-0">
-            <img
-              src={
-                config.opponentAvatar ||
-                'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
-              }
-              alt={config.opponentName}
-              className="w-8 h-8 rounded-full object-cover border border-[#D4AF37]/40"
-            />
+          <div className="relative shrink-0 w-8 h-8 rounded-full overflow-hidden border border-[#D4AF37]/40 bg-[#1e201d] flex items-center justify-center">
+            {config.opponentAvatar && !config.opponentAvatar.includes('unsplash.com') && !config.opponentAvatar.includes('googleusercontent.com') ? (
+              <img
+                src={config.opponentAvatar}
+                alt={config.opponentName}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <span className="material-symbols-outlined text-lg text-[#3DDC84]">
+                {config.mode === 'bot' ? 'smart_toy' : 'person'}
+              </span>
+            )}
             {isBotThinking && (
               <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-[#D4AF37] rounded-full animate-ping" />
             )}
@@ -861,9 +982,9 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
               // High Graphic Background Styles
               let bgClass = getSquareColor(isDarkSquare);
 
-              if (isSelected) bgClass = 'bg-[#F2D06B]/80 ring-4 ring-amber-300 z-30 shadow-2xl';
-              else if (isKingInCheck) bgClass = 'bg-red-600/90 shadow-[0_0_25px_rgba(239,68,68,1)] animate-pulse z-30';
-              else if (isLastMove) bgClass += ' ring-2 ring-[#D4AF37]/60 bg-blend-overlay';
+              if (isSelected) bgClass = 'bg-[#F2D06B]/85 ring-2 ring-inset ring-amber-300 z-10';
+              else if (isKingInCheck) bgClass = 'bg-red-600/90 shadow-[0_0_15px_rgba(239,68,68,0.8)] animate-pulse z-10';
+              else if (isLastMove) bgClass += ' ring-2 ring-inset ring-[#D4AF37]/60 bg-blend-overlay';
 
               return (
                 <div
@@ -949,11 +1070,17 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
       {/* Player Card Header */}
       <div className="w-full glass-panel px-3 py-2 rounded-xl flex items-center justify-between mt-1.5 border border-white/10 shadow-md">
         <div className="flex items-center gap-2.5">
-          <img
-            src={user.avatarUrl}
-            alt={user.username}
-            className="w-8 h-8 rounded-full object-cover border border-[#D4AF37]/50 shrink-0"
-          />
+          <div className="w-8 h-8 rounded-full overflow-hidden border border-[#D4AF37]/50 shrink-0 bg-[#1e201d] flex items-center justify-center">
+            {user.avatarUrl && !user.avatarUrl.includes('googleusercontent.com') && !user.avatarUrl.includes('unsplash.com') ? (
+              <img
+                src={user.avatarUrl}
+                alt={user.username}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <span className="material-symbols-outlined text-lg text-[#D4AF37]">person</span>
+            )}
+          </div>
           <div>
             <div className="flex items-center gap-1.5">
               <span className="font-headline text-xs font-bold text-[#FAF9F6]">
@@ -993,35 +1120,50 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
       </div>
 
       {/* Bottom Tournament Control Buttons Row */}
-      <div className="w-full flex items-center justify-between gap-1.5 mt-2.5">
+      <div className="w-full flex items-center justify-between gap-1 sm:gap-1.5 mt-2.5">
         <button
-          onClick={handleAutoMove}
-          disabled={isBotThinking}
-          className="flex-1 py-2 rounded-lg bg-[#221D18] hover:bg-[#2E2822] text-[#E0D5C1] border border-white/10 text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all cursor-pointer active:scale-95 shadow flex items-center justify-center gap-1"
+          onClick={handleUndo}
+          disabled={fenHistory.length <= 1 || isBotThinking}
+          title="Undo Move"
+          className="flex-1 py-2 rounded-lg bg-[#221D18] hover:bg-[#2E2822] text-[#E0D5C1] border border-white/10 text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-40 cursor-pointer active:scale-95 shadow flex items-center justify-center gap-1"
         >
-          MOVE
+          <span className="material-symbols-outlined text-xs sm:text-sm">undo</span>
+          <span>UNDO</span>
         </button>
 
         <button
-          onClick={handleUndo}
-          disabled={moveHistory.length === 0}
+          onClick={handleRedo}
+          disabled={redoStack.length === 0 || isBotThinking}
+          title="Redo Move"
           className="flex-1 py-2 rounded-lg bg-[#221D18] hover:bg-[#2E2822] text-[#E0D5C1] border border-white/10 text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-40 cursor-pointer active:scale-95 shadow flex items-center justify-center gap-1"
         >
-          UNDO
+          <span className="material-symbols-outlined text-xs sm:text-sm">redo</span>
+          <span>REDO</span>
+        </button>
+
+        <button
+          onClick={handleAutoMove}
+          disabled={isBotThinking}
+          title="Auto Move / Hint"
+          className="flex-1 py-2 rounded-lg bg-[#221D18] hover:bg-[#2E2822] text-[#E0D5C1] border border-white/10 text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-40 cursor-pointer active:scale-95 shadow flex items-center justify-center gap-1"
+        >
+          <span>MOVE</span>
         </button>
 
         <button
           onClick={handleNewGame}
+          title="New Game"
           className="flex-1 py-2 rounded-lg bg-[#2A231C] hover:bg-[#382E25] text-[#E6C265] border border-[#C29B38] text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all cursor-pointer active:scale-95 shadow flex items-center justify-center gap-1 font-headline"
         >
-          NEW GAME
+          <span>NEW</span>
         </button>
 
         <button
           onClick={() => setShowStyleMenu(!showStyleMenu)}
+          title="Board Style"
           className="flex-1 py-2 rounded-lg bg-[#221D18] hover:bg-[#2E2822] text-[#E0D5C1] border border-white/10 text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all cursor-pointer active:scale-95 shadow flex items-center justify-center gap-1"
         >
-          STYLE
+          <span>STYLE</span>
         </button>
       </div>
 

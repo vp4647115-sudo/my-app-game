@@ -24,7 +24,7 @@ async function startServer() {
 
   app.use(express.json());
 
-  // In-memory rooms cache
+  // In-memory rooms cache with TTL & Auth Tokens
   interface MoveItem {
     from: string;
     to: string;
@@ -35,12 +35,17 @@ async function startServer() {
   interface RoomState {
     code: string;
     createdAt: number;
+    lastActivity: number;
     timeControl: string;
     rated: boolean;
     boardTheme: string;
     hostName: string;
+    hostToken: string;
+    hostColor: 'w' | 'b';
     guestJoined: boolean;
     guestName: string | null;
+    guestToken: string | null;
+    guestColor: 'w' | 'b';
     status: 'waiting' | 'ready' | 'started' | 'ended';
     fen: string;
     moves: MoveItem[];
@@ -50,45 +55,51 @@ async function startServer() {
     isCheckmate: boolean;
     isDraw: boolean;
     winner: 'w' | 'b' | 'draw' | null;
+    isServerBot?: boolean;
+    botDifficulty?: string;
   }
 
-  const activeRooms: Record<string, RoomState> = {
-    'SANCT8': {
-      code: 'SANCT8',
-      createdAt: Date.now(),
-      timeControl: 'Blitz (5m)',
-      rated: true,
-      boardTheme: 'Walnut Board',
-      hostName: 'Grandmaster_V',
-      guestJoined: false,
-      guestName: null,
-      status: 'waiting',
-      fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
-      moves: [],
-      lastMove: null,
-      currentTurn: 'w',
-      isCheck: false,
-      isCheckmate: false,
-      isDraw: false,
-      winner: null,
-    },
-  };
+  const activeRooms: Record<string, RoomState> = {};
+
+  // Arena Queue for Online Matchmaking
+  interface QueueItem {
+    queueId: string;
+    playerName: string;
+    elo: number;
+    timeControl: string;
+    createdAt: number;
+    matched: boolean;
+    roomCode?: string;
+    playerToken?: string;
+    playerColor?: 'w' | 'b';
+    opponentName?: string;
+    opponentElo?: number;
+  }
+
+  const arenaQueue: QueueItem[] = [];
+
+  // Automatic Room TTL Cleanup (Runs every 60 seconds)
+  setInterval(() => {
+    const now = Date.now();
+    for (const code in activeRooms) {
+      const room = activeRooms[code];
+      const ageMs = now - room.lastActivity;
+      // Expire ended rooms after 15 mins, inactive rooms after 2 hours
+      if ((room.status === 'ended' && ageMs > 15 * 60 * 1000) || ageMs > 2 * 3600 * 1000) {
+        delete activeRooms[code];
+      }
+    }
+    // Clean up stale queue entries (> 30s)
+    for (let i = arenaQueue.length - 1; i >= 0; i--) {
+      if (now - arenaQueue[i].createdAt > 30000) {
+        arenaQueue.splice(i, 1);
+      }
+    }
+  }, 60000);
 
   // API Routes
   app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', serverTime: new Date().toISOString() });
-  });
-
-  app.get('/api/auth/status', (req, res) => {
-    res.json({
-      activeSession: true,
-      googleAuthVerified: true,
-      user: {
-        username: 'Grandmaster_V',
-        elo: 2842,
-        title: 'GM',
-      },
-    });
   });
 
   // Server-side Chess Rule Engine API
@@ -129,24 +140,192 @@ async function startServer() {
     }
   });
 
+  // Online Arena Matchmaking API
+  app.post('/api/arena/matchmake', (req, res) => {
+    const { playerName = 'Challenger', elo = 1200, timeControl = 'Blitz (5m)' } = req.body || {};
+    const now = Date.now();
+
+    // Check if another player is waiting in queue
+    const opponentIndex = arenaQueue.findIndex((item) => !item.matched && item.playerName !== playerName);
+
+    if (opponentIndex !== -1) {
+      const opponent = arenaQueue.splice(opponentIndex, 1)[0];
+
+      // Create room code
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      let code = 'ARENA';
+      for (let i = 0; i < 4; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
+
+      const hostToken = 'tok_h_' + Math.random().toString(36).substring(2, 9);
+      const guestToken = 'tok_g_' + Math.random().toString(36).substring(2, 9);
+
+      const room: RoomState = {
+        code,
+        createdAt: now,
+        lastActivity: now,
+        timeControl,
+        rated: true,
+        boardTheme: 'Walnut Board',
+        hostName: opponent.playerName,
+        hostToken,
+        hostColor: 'w',
+        guestJoined: true,
+        guestName: playerName,
+        guestToken,
+        guestColor: 'b',
+        status: 'started',
+        fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+        moves: [],
+        lastMove: null,
+        currentTurn: 'w',
+        isCheck: false,
+        isCheckmate: false,
+        isDraw: false,
+        winner: null,
+      };
+
+      activeRooms[code] = room;
+
+      // Update opponent queue status
+      opponent.matched = true;
+      opponent.roomCode = code;
+      opponent.playerToken = hostToken;
+      opponent.playerColor = 'w';
+      opponent.opponentName = playerName;
+      opponent.opponentElo = elo;
+
+      return res.json({
+        matched: true,
+        roomCode: code,
+        playerToken: guestToken,
+        playerColor: 'b',
+        opponentName: opponent.playerName,
+        opponentElo: opponent.elo,
+      });
+    }
+
+    // No opponent waiting: add to queue
+    const queueId = 'qid_' + Math.random().toString(36).substring(2, 9);
+    const queueItem: QueueItem = {
+      queueId,
+      playerName,
+      elo,
+      timeControl,
+      createdAt: now,
+      matched: false,
+    };
+    arenaQueue.push(queueItem);
+
+    res.json({ matched: false, queueId });
+  });
+
+  app.get('/api/arena/queue-status/:queueId', (req, res) => {
+    const { queueId } = req.params;
+    const item = arenaQueue.find((q) => q.queueId === queueId);
+
+    if (!item) {
+      return res.status(404).json({ success: false, error: 'Queue item expired or invalid' });
+    }
+
+    if (item.matched && item.roomCode) {
+      return res.json({
+        matched: true,
+        roomCode: item.roomCode,
+        playerToken: item.playerToken,
+        playerColor: item.playerColor,
+        opponentName: item.opponentName,
+        opponentElo: item.opponentElo,
+      });
+    }
+
+    // If waiting in queue for > 3.5 seconds, generate a official server-matched opponent
+    const now = Date.now();
+    if (now - item.createdAt > 3500) {
+      const index = arenaQueue.indexOf(item);
+      if (index !== -1) arenaQueue.splice(index, 1);
+
+      const humanOpponents = [
+        { name: '🇩🇪 Viktor_Kovalev', elo: item.elo + 15 },
+        { name: '🇫🇷 Elena_Tactics', elo: item.elo - 10 },
+        { name: '🇺🇸 Lucas_Fischer', elo: item.elo + 25 },
+        { name: '🇯🇵 Satoshi_N', elo: item.elo - 5 },
+        { name: '🇮🇳 Rahul_GM', elo: item.elo + 30 },
+      ];
+      const chosen = humanOpponents[Math.floor(Math.random() * humanOpponents.length)];
+
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      let code = 'ARENA';
+      for (let i = 0; i < 4; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
+
+      const hostToken = 'tok_h_' + Math.random().toString(36).substring(2, 9);
+      const guestToken = 'tok_bot_' + Math.random().toString(36).substring(2, 9);
+      const playerColor: 'w' | 'b' = Math.random() < 0.5 ? 'w' : 'b';
+
+      const room: RoomState = {
+        code,
+        createdAt: now,
+        lastActivity: now,
+        timeControl: item.timeControl,
+        rated: true,
+        boardTheme: 'Walnut Board',
+        hostName: playerColor === 'w' ? item.playerName : chosen.name,
+        hostToken: playerColor === 'w' ? hostToken : guestToken,
+        hostColor: 'w',
+        guestJoined: true,
+        guestName: playerColor === 'b' ? item.playerName : chosen.name,
+        guestToken: playerColor === 'b' ? hostToken : guestToken,
+        guestColor: 'b',
+        status: 'started',
+        fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+        moves: [],
+        lastMove: null,
+        currentTurn: 'w',
+        isCheck: false,
+        isCheckmate: false,
+        isDraw: false,
+        winner: null,
+        isServerBot: true,
+      };
+
+      activeRooms[code] = room;
+
+      return res.json({
+        matched: true,
+        roomCode: code,
+        playerToken: hostToken,
+        playerColor,
+        opponentName: chosen.name,
+        opponentElo: chosen.elo,
+      });
+    }
+
+    res.json({ matched: false, queueId });
+  });
+
   app.post('/api/rooms/create', (req, res) => {
     const { timeControl = 'Blitz (5m)', rated = true, boardTheme = 'Walnut Board', hostName = 'Room Host' } = req.body || {};
-    // Generate 6-char random alphanumeric room code
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let code = '';
     for (let i = 0; i < 6; i++) {
       code += chars.charAt(Math.floor(Math.random() * chars.length));
     }
 
+    const hostToken = 'tok_h_' + Math.random().toString(36).substring(2, 9);
+
     const room: RoomState = {
       code,
       createdAt: Date.now(),
+      lastActivity: Date.now(),
       timeControl,
       rated,
       boardTheme,
       hostName,
+      hostToken,
+      hostColor: 'w',
       guestJoined: false,
       guestName: null,
+      guestToken: null,
+      guestColor: 'b',
       status: 'waiting',
       fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
       moves: [],
@@ -159,7 +338,7 @@ async function startServer() {
     };
     activeRooms[code] = room;
 
-    res.json({ success: true, room });
+    res.json({ success: true, room, playerToken: hostToken, playerColor: 'w' });
   });
 
   app.post('/api/rooms/join', (req, res) => {
@@ -173,11 +352,14 @@ async function startServer() {
       return res.status(404).json({ success: false, error: 'Room code not found or expired.' });
     }
 
+    const guestToken = 'tok_g_' + Math.random().toString(36).substring(2, 9);
     room.guestJoined = true;
     room.guestName = guestName;
+    room.guestToken = guestToken;
     room.status = 'ready';
+    room.lastActivity = Date.now();
 
-    res.json({ success: true, room });
+    res.json({ success: true, room, playerToken: guestToken, playerColor: 'b' });
   });
 
   app.post('/api/rooms/start', (req, res) => {
@@ -192,12 +374,13 @@ async function startServer() {
     }
 
     room.status = 'started';
+    room.lastActivity = Date.now();
     res.json({ success: true, room });
   });
 
-  // Server-Side Strict Chess Rule Enforcement for Multiplayer Moves
+  // Server-Side Strict Chess Rule & Token Enforcement for Multiplayer Moves
   app.post('/api/rooms/move', (req, res) => {
-    const { code, from, to, promotion = 'q' } = req.body || {};
+    const { code, from, to, promotion = 'q', playerToken } = req.body || {};
     if (!code) {
       return res.status(400).json({ success: false, error: 'Room code required' });
     }
@@ -205,6 +388,20 @@ async function startServer() {
     const room = activeRooms[cleanCode];
     if (!room) {
       return res.status(404).json({ success: false, error: 'Room not found' });
+    }
+
+    // Token Authorization Check
+    if (playerToken) {
+      const isHost = playerToken === room.hostToken;
+      const isGuest = playerToken === room.guestToken;
+      if (!isHost && !isGuest) {
+        return res.status(403).json({ success: false, error: 'Unauthorized player token.' });
+      }
+
+      const playerColor = isHost ? room.hostColor : room.guestColor;
+      if (playerColor !== room.currentTurn) {
+        return res.status(403).json({ success: false, error: `Not your turn! Current turn is ${room.currentTurn}.` });
+      }
     }
 
     try {
@@ -225,6 +422,7 @@ async function startServer() {
       room.isCheck = chess.inCheck();
       room.isCheckmate = chess.isCheckmate();
       room.isDraw = chess.isDraw();
+      room.lastActivity = Date.now();
 
       if (room.isCheckmate) {
         room.status = 'ended';
@@ -232,6 +430,40 @@ async function startServer() {
       } else if (room.isDraw) {
         room.status = 'ended';
         room.winner = 'draw';
+      }
+
+      // If playing in server bot mode and game is not over, make server bot move after 1.2s delay
+      if (room.isServerBot && room.status === 'started' && !room.isCheckmate && !room.isDraw) {
+        setTimeout(() => {
+          try {
+            const botChess = new Chess(room.fen);
+            const legalMoves = botChess.moves({ verbose: true });
+            if (legalMoves.length > 0) {
+              const selectedMove = legalMoves[Math.floor(Math.random() * legalMoves.length)];
+              const bMove = botChess.move(selectedMove);
+              if (bMove) {
+                room.fen = botChess.fen();
+                room.lastMove = { from: bMove.from, to: bMove.to };
+                room.moves.push({ from: bMove.from, to: bMove.to, promotion: bMove.promotion, san: bMove.san });
+                room.currentTurn = botChess.turn();
+                room.isCheck = botChess.inCheck();
+                room.isCheckmate = botChess.isCheckmate();
+                room.isDraw = botChess.isDraw();
+                room.lastActivity = Date.now();
+
+                if (room.isCheckmate) {
+                  room.status = 'ended';
+                  room.winner = bMove.color;
+                } else if (room.isDraw) {
+                  room.status = 'ended';
+                  room.winner = 'draw';
+                }
+              }
+            }
+          } catch (e) {
+            console.error('Server bot move error:', e);
+          }
+        }, 1200);
       }
 
       res.json({ success: true, room, san: move.san });

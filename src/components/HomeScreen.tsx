@@ -1,14 +1,77 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { UserProfile } from '../types';
+import { UserProfile, OngoingGameSession } from '../types';
 
 interface HomeScreenProps {
   user: UserProfile;
   onNavigate: (screen: 'bot' | 'arena' | 'friend' | 'profile' | 'settings' | 'learn') => void;
   onStartOffline: () => void;
+  onResumeMatch: (session: OngoingGameSession) => void;
 }
 
-export const HomeScreen: React.FC<HomeScreenProps> = ({ user, onNavigate, onStartOffline }) => {
+export const HomeScreen: React.FC<HomeScreenProps> = ({ user, onNavigate, onStartOffline, onResumeMatch }) => {
+  const [ongoingSession, setOngoingSession] = useState<OngoingGameSession | null>(() => {
+    try {
+      const saved = localStorage.getItem('vpn_chess_ongoing_session');
+      if (saved) {
+        const parsed: OngoingGameSession = JSON.parse(saved);
+        if (parsed && parsed.updatedAt && Date.now() - parsed.updatedAt < 24 * 60 * 60 * 1000) {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      console.error('Failed to parse ongoing session:', e);
+    }
+    return null;
+  });
+
+  useEffect(() => {
+    const checkOngoing = () => {
+      try {
+        const saved = localStorage.getItem('vpn_chess_ongoing_session');
+        if (saved) {
+          const parsed: OngoingGameSession = JSON.parse(saved);
+          if (parsed && parsed.updatedAt && Date.now() - parsed.updatedAt < 24 * 60 * 60 * 1000) {
+            setOngoingSession(parsed);
+            return;
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+      setOngoingSession(null);
+    };
+
+    checkOngoing();
+    window.addEventListener('focus', checkOngoing);
+    return () => window.removeEventListener('focus', checkOngoing);
+  }, []);
+
+  const formatClock = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  };
+  const safeElo = user?.elo ?? 1200;
+  const safeWins = user?.wins ?? 0;
+  const safeLosses = user?.losses ?? 0;
+  const safeDraws = user?.draws ?? 0;
+  const totalDecided = safeWins + safeLosses;
+  const safeGamesPlayed = user?.gamesPlayed || (safeWins + safeLosses + safeDraws);
+  const winRatePercentage = totalDecided > 0 ? `${Math.round((safeWins / totalDecided) * 100)}%` : '0%';
+
+  const currentRankLabel = safeGamesPlayed > 0
+    ? safeElo >= 2400
+      ? 'Grandmaster'
+      : safeElo >= 2000
+      ? 'Master'
+      : safeElo >= 1600
+      ? 'Expert'
+      : safeElo >= 1400
+      ? 'Class A'
+      : 'Challenger'
+    : 'Unranked';
+
   return (
     <div className="relative z-10 min-h-screen flex flex-col items-center justify-start pt-16 pb-20 px-3 max-w-md mx-auto">
       {/* Luxury Brand Header */}
@@ -27,10 +90,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ user, onNavigate, onStar
               chess
             </span>
           </div>
-          <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#3DDC84] opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-[#3DDC84] border-2 border-[#0B0B0F]"></span>
-          </span>
         </div>
 
         <h1 className="font-brand text-2xl md:text-3xl text-[#FFFFFF] tracking-[0.15em] font-bold gold-shimmer drop-shadow">
@@ -47,50 +106,122 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ user, onNavigate, onStar
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.05 }}
-        className="w-full glass-panel rounded-xl p-2.5 mb-3.5 border border-[#D4AF37]/30 shadow-lg grid grid-cols-2 sm:grid-cols-4 gap-2 text-center"
+        className="w-full glass-panel rounded-xl p-2 mb-3.5 border border-[#D4AF37]/30 shadow-lg grid grid-cols-2 sm:grid-cols-4 gap-2 text-center"
       >
-        <div className="p-2 rounded-lg bg-white/5 border border-white/5 flex flex-col items-center">
-          <span className="text-[9px] text-[#A8A8A8] font-bold uppercase tracking-wider mb-0.5">
+        <div className="p-2 rounded-lg bg-white/5 border border-white/5 flex flex-col items-center justify-center min-w-0 overflow-hidden">
+          <span className="text-[9px] text-[#A8A8A8] font-bold uppercase tracking-wider mb-0.5 truncate max-w-full">
             Global Rating
           </span>
-          <span className="font-headline text-base font-bold text-[#D4AF37] flex items-center gap-1">
-            <span className="material-symbols-outlined text-sm">military_tech</span>
-            {user.elo || 1650}
+          <span className="font-headline text-xs sm:text-sm font-bold text-[#D4AF37] flex items-center justify-center gap-1 w-full truncate max-w-full px-0.5">
+            <span className="material-symbols-outlined text-sm shrink-0">military_tech</span>
+            <span className="truncate">{safeElo}</span>
           </span>
         </div>
 
-        <div className="p-2 rounded-lg bg-white/5 border border-white/5 flex flex-col items-center">
-          <span className="text-[9px] text-[#A8A8A8] font-bold uppercase tracking-wider mb-0.5">
+        <div className="p-2 rounded-lg bg-white/5 border border-white/5 flex flex-col items-center justify-center min-w-0 overflow-hidden">
+          <span className="text-[9px] text-[#A8A8A8] font-bold uppercase tracking-wider mb-0.5 truncate max-w-full">
             Win Rate
           </span>
-          <span className="font-headline text-base font-bold text-[#3DDC84] flex items-center gap-1">
-            <span className="material-symbols-outlined text-sm">trending_up</span>
-            {user.wins + user.losses > 0
-              ? `${Math.round((user.wins / (user.wins + user.losses)) * 100)}%`
-              : '68%'}
+          <span className="font-headline text-xs sm:text-sm font-bold text-[#3DDC84] flex items-center justify-center gap-1 w-full truncate max-w-full px-0.5">
+            <span className="material-symbols-outlined text-sm shrink-0">trending_up</span>
+            <span className="truncate">{winRatePercentage}</span>
           </span>
         </div>
 
-        <div className="p-2 rounded-lg bg-white/5 border border-white/5 flex flex-col items-center">
-          <span className="text-[9px] text-[#A8A8A8] font-bold uppercase tracking-wider mb-0.5">
+        <div className="p-2 rounded-lg bg-white/5 border border-white/5 flex flex-col items-center justify-center min-w-0 overflow-hidden">
+          <span className="text-[9px] text-[#A8A8A8] font-bold uppercase tracking-wider mb-0.5 truncate max-w-full">
             Current Rank
           </span>
-          <span className="font-headline text-base font-bold text-[#4DA8FF] flex items-center gap-1">
-            <span className="material-symbols-outlined text-sm">emoji_events</span>
-            Top 3.5%
+          <span className="font-headline text-xs sm:text-sm font-bold text-[#4DA8FF] flex items-center justify-center gap-1 w-full truncate max-w-full px-0.5">
+            <span className="material-symbols-outlined text-sm shrink-0">emoji_events</span>
+            <span className="truncate">{currentRankLabel}</span>
           </span>
         </div>
 
-        <div className="p-2 rounded-lg bg-white/5 border border-white/5 flex flex-col items-center">
-          <span className="text-[9px] text-[#A8A8A8] font-bold uppercase tracking-wider mb-0.5">
+        <div className="p-2 rounded-lg bg-white/5 border border-white/5 flex flex-col items-center justify-center min-w-0 overflow-hidden">
+          <span className="text-[9px] text-[#A8A8A8] font-bold uppercase tracking-wider mb-0.5 truncate max-w-full">
             Matches
           </span>
-          <span className="font-headline text-base font-bold text-[#FFFFFF] flex items-center gap-1">
-            <span className="material-symbols-outlined text-sm">query_stats</span>
-            {user.wins + user.losses + user.draws || 142}
+          <span className="font-headline text-xs sm:text-sm font-bold text-[#FFFFFF] flex items-center justify-center gap-1 w-full truncate max-w-full px-0.5">
+            <span className="material-symbols-outlined text-sm shrink-0">query_stats</span>
+            <span className="truncate">{safeGamesPlayed}</span>
           </span>
         </div>
       </motion.div>
+
+      {/* Ongoing Match Reconnection Banner */}
+      {ongoingSession && (
+        <motion.div
+          initial={{ scale: 0.95, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="w-full glass-panel p-3.5 rounded-2xl mb-3.5 border-2 border-[#D4AF37] bg-gradient-to-r from-[#D4AF37]/20 via-[#17181D] to-[#0B0B0F] shadow-[0_0_25px_rgba(212,175,55,0.35)] relative overflow-hidden"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#3DDC84] opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-[#3DDC84]"></span>
+              </span>
+              <span className="font-headline text-xs font-bold text-[#3DDC84] tracking-wider uppercase">
+                Ongoing Match Detected
+              </span>
+            </div>
+            <span className="text-[10px] text-[#D4AF37] font-bold uppercase bg-white/10 px-2 py-0.5 rounded-full border border-[#D4AF37]/30">
+              {ongoingSession.config.mode === 'bot'
+                ? 'Bot Battle'
+                : ongoingSession.config.mode === 'friend'
+                ? `Room ${ongoingSession.config.roomCode || ''}`
+                : 'Pass & Play'}
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between my-2 px-1">
+            <div className="flex items-center gap-2.5">
+              <div className="w-10 h-10 rounded-full border border-[#D4AF37] bg-[#1e201d] flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-xl text-[#D4AF37]">
+                  {ongoingSession.config.mode === 'bot' ? 'smart_toy' : 'person'}
+                </span>
+              </div>
+              <div>
+                <div className="font-headline text-sm font-bold text-[#FFFFFF]">
+                  vs {ongoingSession.config.opponentName}
+                </div>
+                <div className="text-[10px] text-[#D4AF37] font-bold">
+                  Rating: {ongoingSession.config.opponentElo} ELO
+                </div>
+              </div>
+            </div>
+
+            <div className="text-right">
+              <div className="text-[9px] text-[#A8A8A8] font-bold uppercase">Clocks</div>
+              <div className="font-mono text-xs font-bold text-[#FFFFFF]">
+                {formatClock(ongoingSession.playerTime)} vs {formatClock(ongoingSession.opponentTime)}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 mt-3">
+            <button
+              onClick={() => onResumeMatch(ongoingSession)}
+              className="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#D4AF37] via-[#f1d77a] to-[#AA7C11] text-[#0B0B0F] font-headline text-xs font-black uppercase tracking-wider hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-base">play_arrow</span>
+              <span>Continue Ongoing Match</span>
+            </button>
+
+            <button
+              onClick={() => {
+                localStorage.removeItem('vpn_chess_ongoing_session');
+                setOngoingSession(null);
+              }}
+              title="Discard ongoing match"
+              className="p-2.5 rounded-xl glass-panel hover:bg-red-500/20 hover:border-red-500/50 text-[#A8A8A8] hover:text-red-400 active:scale-95 transition-all cursor-pointer border border-white/10"
+            >
+              <span className="material-symbols-outlined text-base">delete</span>
+            </button>
+          </div>
+        </motion.div>
+      )}
 
       {/* Main Action Grid */}
       <div className="w-full space-y-2.5">

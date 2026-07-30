@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { UserProfile, GameSettings, MatchHistoryItem, ActiveMatchConfig } from './types';
+import { UserProfile, GameSettings, MatchHistoryItem, ActiveMatchConfig, OngoingGameSession } from './types';
 import {
   loadUserProfile,
   saveUserProfile,
@@ -9,6 +9,7 @@ import {
   addMatchHistoryItem,
   getSupabase,
   DEFAULT_PROFILE,
+  clearUserCache,
 } from './services/supabaseClient';
 import {
   auth as firebaseAuth,
@@ -39,7 +40,6 @@ import { LoginLandingScreen } from './components/LoginLandingScreen';
 import { NavDrawer } from './components/NavDrawer';
 import { ApkInstallModal } from './components/ApkInstallModal';
 import { OnboardingModal } from './components/OnboardingModal';
-import { ErpAuthModal, ErpUserSession } from './components/ErpAuthModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
 export default function App() {
@@ -52,69 +52,11 @@ export default function App() {
     return localStorage.getItem('vpn_chess_authenticated') === 'true';
   });
 
-  // Listen to Auth state (Supabase + Firebase)
+  // Unified Auth State Listener (Firebase Primary)
   useEffect(() => {
     let unsubscribeSupa: (() => void) | null = null;
 
-    const syncAuthSession = () => {
-      const client = getSupabase();
-      if (client) {
-        client.auth.getSession().then(({ data: { session } }) => {
-          if (session?.user?.email) {
-            const email = session.user.email;
-            const fullName = session.user.user_metadata?.full_name || session.user.user_metadata?.name || email.split('@')[0];
-            const avatar = session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture;
-            setUser((prev) => {
-              const updated = {
-                ...prev,
-                id: session.user.id || prev.id,
-                username: fullName,
-                avatarUrl: avatar || prev.avatarUrl,
-                linkedGoogle: session.user.app_metadata?.provider === 'google' || Boolean(session.user.user_metadata?.avatar_url),
-                jwtActive: true,
-              };
-              saveUserProfile(updated);
-              return updated;
-            });
-            setIsAuthenticated(true);
-            localStorage.setItem('vpn_chess_authenticated', 'true');
-          }
-        });
-
-        const { data: { subscription } } = client.auth.onAuthStateChange((_event, session) => {
-          if (session?.user?.email) {
-            const email = session.user.email;
-            const fullName = session.user.user_metadata?.full_name || session.user.user_metadata?.name || email.split('@')[0];
-            const avatar = session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture;
-            setUser((prev) => {
-              const updated = {
-                ...prev,
-                id: session.user.id || prev.id,
-                username: fullName,
-                avatarUrl: avatar || prev.avatarUrl,
-                linkedGoogle: session.user.app_metadata?.provider === 'google' || Boolean(session.user.user_metadata?.avatar_url),
-                jwtActive: true,
-              };
-              saveUserProfile(updated);
-              return updated;
-            });
-            setIsAuthenticated(true);
-            localStorage.setItem('vpn_chess_authenticated', 'true');
-          } else if (_event === 'SIGNED_OUT') {
-            setIsAuthenticated(false);
-            localStorage.removeItem('vpn_chess_authenticated');
-            setUser(DEFAULT_PROFILE);
-            saveUserProfile(DEFAULT_PROFILE);
-          }
-        });
-
-        unsubscribeSupa = () => subscription.unsubscribe();
-      }
-    };
-
-    syncAuthSession();
-
-    // Firebase Auth State Listener
+    // Firebase Auth State Listener (Primary)
     const unsubscribeFirebase = onAuthStateChanged(firebaseAuth, async (fbUser) => {
       if (fbUser) {
         const email = fbUser.email || '';
@@ -135,7 +77,6 @@ export default function App() {
             jwtActive: true,
           };
           saveUserProfile(updated);
-          saveFirebaseUserProfile(fbUser.uid, updated);
           return updated;
         });
 
@@ -147,14 +88,38 @@ export default function App() {
 
         setIsAuthenticated(true);
         localStorage.setItem('vpn_chess_authenticated', 'true');
+      } else {
+        // Fallback check for Supabase session only if Firebase is not logged in
+        const client = getSupabase();
+        if (client) {
+          client.auth.getSession().then(({ data: { session } }) => {
+            if (session?.user?.email && !firebaseAuth.currentUser) {
+              const email = session.user.email;
+              const fullName = session.user.user_metadata?.full_name || session.user.user_metadata?.name || email.split('@')[0];
+              const avatar = session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture;
+              setUser((prev) => {
+                const updated = {
+                  ...prev,
+                  id: session.user.id || prev.id,
+                  username: fullName,
+                  avatarUrl: avatar || prev.avatarUrl,
+                  linkedGoogle: session.user.app_metadata?.provider === 'google' || Boolean(session.user.user_metadata?.avatar_url),
+                  jwtActive: true,
+                };
+                saveUserProfile(updated);
+                return updated;
+              });
+              setIsAuthenticated(true);
+              localStorage.setItem('vpn_chess_authenticated', 'true');
+            }
+          });
+        }
       }
     });
 
-    window.addEventListener('vpn_chess_supabase_updated', syncAuthSession);
     return () => {
       if (unsubscribeSupa) unsubscribeSupa();
       unsubscribeFirebase();
-      window.removeEventListener('vpn_chess_supabase_updated', syncAuthSession);
     };
   }, []);
 
@@ -170,7 +135,6 @@ export default function App() {
   // Modals & Navigation Drawer
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
-  const [isErpAuthOpen, setIsErpAuthOpen] = useState(false);
   const [isNavDrawerOpen, setIsNavDrawerOpen] = useState(false);
   const [isApkInstallOpen, setIsApkInstallOpen] = useState(false);
   const [isGuideOpen, setIsGuideOpen] = useState<boolean>(() => {
@@ -220,8 +184,23 @@ export default function App() {
     });
   };
 
+  // Resume ongoing match handler
+  const handleResumeMatch = (session: OngoingGameSession) => {
+    const restoredConfig: ActiveMatchConfig = {
+      ...session.config,
+      initialFen: session.fen,
+      initialMoveHistory: session.moveHistory,
+      initialPlayerTime: session.playerTime,
+      initialOpponentTime: session.opponentTime,
+      initialFenHistory: session.fenHistory,
+    };
+    setActiveMatch(restoredConfig);
+    setCurrentScreen('game');
+  };
+
   // Complete match handler
   const handleGameComplete = (result: 'WIN' | 'LOSS' | 'DRAW', eloChange: number) => {
+    localStorage.removeItem('vpn_chess_ongoing_session');
     if (!activeMatch) return;
 
     // Build Match History Item
@@ -298,7 +277,9 @@ export default function App() {
 
   const handleSignOut = () => {
     setIsAuthenticated(false);
-    localStorage.removeItem('vpn_chess_authenticated');
+    setUser(DEFAULT_PROFILE);
+    setMatchHistory([]);
+    clearUserCache();
     signOutFirebase().catch((err) => console.warn('Firebase signout error:', err));
     const client = getSupabase();
     if (client) {
@@ -306,187 +287,173 @@ export default function App() {
     }
   };
 
-  if (!isAuthenticated) {
-    return (
-      <LoginLandingScreen
-        onLoginSuccess={handleLoginSuccess}
-        onPlayAsGuest={handlePlayAsGuest}
-      />
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-[#0B0B0F] text-[#FFFFFF] font-body relative overflow-x-hidden selection:bg-[#D4AF37] selection:text-[#0B0B0F]">
-      {/* 3D Background Canvas (shown on Home, Arena, Bot screens) */}
-      {currentScreen !== 'game' && (
-        <ThreeChessBackground lowPerformanceMode={settings.lowPerformanceMode} />
-      )}
-
-      {/* Top Header Navigation (Hidden during active match) */}
-      {currentScreen !== 'game' && (
-        <HeaderNav
-          user={user}
-          onOpenMenu={() => setIsNavDrawerOpen(true)}
-          onOpenProfile={() => handleNavigate('profile')}
-          onOpenSettings={() => handleNavigate('settings')}
-          onOpenAuth={() => setIsAuthOpen(true)}
-          showBack={currentScreen !== 'home'}
-          onBack={() => setCurrentScreen('home')}
+    <ErrorBoundary onReset={() => setCurrentScreen('home')}>
+      {!isAuthenticated ? (
+        <LoginLandingScreen
+          onLoginSuccess={handleLoginSuccess}
+          onPlayAsGuest={handlePlayAsGuest}
         />
-      )}
-
-      {/* Main Screen Content */}
-      <main className="relative z-10">
-        <ErrorBoundary onReset={() => setCurrentScreen('home')}>
-          {currentScreen === 'home' && (
-            <HomeScreen
-              user={user}
-              onNavigate={handleNavigate}
-              onStartOffline={handleStartOfflineMatch}
-            />
+      ) : (
+        <div className="min-h-screen bg-[#0B0B0F] text-[#FFFFFF] font-body relative overflow-x-hidden selection:bg-[#D4AF37] selection:text-[#0B0B0F]">
+          {/* 3D Background Canvas (shown on Home, Arena, Bot screens) */}
+          {currentScreen !== 'game' && (
+            <ThreeChessBackground lowPerformanceMode={settings.lowPerformanceMode} />
           )}
 
-          {currentScreen === 'learn' && (
-            <LearnAcademyScreen
+          {/* Top Header Navigation (Hidden during active match) */}
+          {currentScreen !== 'game' && (
+            <HeaderNav
               user={user}
-              settings={settings}
-              onBack={() => setCurrentScreen('home')}
-              onStartMatch={handleStartMatch}
-            />
-          )}
-
-          {currentScreen === 'bot' && (
-            <BotSelectScreen
-              onStartMatch={handleStartMatch}
-              onBack={() => setCurrentScreen('home')}
+              isAuthenticated={isAuthenticated}
+              onOpenMenu={() => setIsNavDrawerOpen(true)}
+              onOpenProfile={() => handleNavigate('profile')}
               onOpenSettings={() => handleNavigate('settings')}
-            />
-          )}
-
-          {currentScreen === 'arena' && (
-            <ArenaScreen
-              user={user}
-              onStartMatch={handleStartMatch}
-              onBack={() => setCurrentScreen('home')}
-            />
-          )}
-
-          {currentScreen === 'friend' && (
-            <FriendScreen
-              user={user}
-              onStartMatch={handleStartMatch}
-              onBack={() => setCurrentScreen('home')}
-            />
-          )}
-
-          {currentScreen === 'profile' && (
-            <ProfileScreen
-              user={user}
-              matchHistory={matchHistory}
-              onOpenEditModal={() => setIsEditProfileOpen(true)}
-              onUpdateProfile={handleSaveProfile}
-              onBack={currentScreen === 'profile' && activeTab === 'home' ? () => setCurrentScreen('home') : undefined}
-            />
-          )}
-
-          {currentScreen === 'settings' && (
-            <SettingsScreen
-              user={user}
-              settings={settings}
-              onUpdateSettings={handleUpdateSettings}
-              onOpenEditProfile={() => setIsEditProfileOpen(true)}
-              onOpenApkInstall={() => setIsApkInstallOpen(true)}
-              onOpenGuide={() => setIsGuideOpen(true)}
+              onOpenAuth={() => setIsAuthOpen(true)}
               onSignOut={handleSignOut}
-              onBack={currentScreen === 'settings' && activeTab === 'home' ? () => setCurrentScreen('home') : undefined}
+              showBack={currentScreen !== 'home'}
+              onBack={() => setCurrentScreen('home')}
             />
           )}
 
-          {currentScreen === 'game' && activeMatch && (
-            <ChessBoardGame
-              config={activeMatch}
+          {/* Main Screen Content */}
+          <main className="relative z-10">
+            {currentScreen === 'home' && (
+              <HomeScreen
+                user={user}
+                onNavigate={handleNavigate}
+                onStartOffline={handleStartOfflineMatch}
+                onResumeMatch={handleResumeMatch}
+              />
+            )}
+
+            {currentScreen === 'learn' && (
+              <LearnAcademyScreen
+                user={user}
+                settings={settings}
+                onBack={() => setCurrentScreen('home')}
+                onStartMatch={handleStartMatch}
+              />
+            )}
+
+            {currentScreen === 'bot' && (
+              <BotSelectScreen
+                onStartMatch={handleStartMatch}
+                onBack={() => setCurrentScreen('home')}
+                onOpenSettings={() => handleNavigate('settings')}
+              />
+            )}
+
+            {currentScreen === 'arena' && (
+              <ArenaScreen
+                user={user}
+                onStartMatch={handleStartMatch}
+                onBack={() => setCurrentScreen('home')}
+              />
+            )}
+
+            {currentScreen === 'friend' && (
+              <FriendScreen
+                user={user}
+                onStartMatch={handleStartMatch}
+                onBack={() => setCurrentScreen('home')}
+              />
+            )}
+
+            {currentScreen === 'profile' && (
+              <ProfileScreen
+                user={user}
+                matchHistory={matchHistory}
+                onOpenEditModal={() => setIsEditProfileOpen(true)}
+                onUpdateProfile={handleSaveProfile}
+                onBack={currentScreen === 'profile' && activeTab === 'home' ? () => setCurrentScreen('home') : undefined}
+              />
+            )}
+
+            {currentScreen === 'settings' && (
+              <SettingsScreen
+                user={user}
+                settings={settings}
+                onUpdateSettings={handleUpdateSettings}
+                onOpenEditProfile={() => setIsEditProfileOpen(true)}
+                onOpenApkInstall={() => setIsApkInstallOpen(true)}
+                onOpenGuide={() => setIsGuideOpen(true)}
+                onSignOut={handleSignOut}
+                onBack={currentScreen === 'settings' && activeTab === 'home' ? () => setCurrentScreen('home') : undefined}
+              />
+            )}
+
+            {currentScreen === 'game' && activeMatch && (
+              <ChessBoardGame
+                config={activeMatch}
+                user={user}
+                settings={settings}
+                onGameComplete={handleGameComplete}
+                onExit={() => setCurrentScreen('home')}
+              />
+            )}
+          </main>
+
+          {/* Bottom Navigation Shell (Hidden during active match) */}
+          {currentScreen !== 'game' && (
+            <BottomNav activeTab={activeTab} onSelectTab={handleSelectTab} />
+          )}
+
+          {/* Modals & Navigation Drawer */}
+          <NavDrawer
+            isOpen={isNavDrawerOpen}
+            user={user}
+            onClose={() => setIsNavDrawerOpen(false)}
+            onNavigate={handleNavigate}
+            onStartOffline={handleStartOfflineMatch}
+            onOpenAuth={() => setIsAuthOpen(true)}
+            onOpenApkInstall={() => setIsApkInstallOpen(true)}
+            onOpenGuide={() => setIsGuideOpen(true)}
+            onSignOut={handleSignOut}
+          />
+
+          <OnboardingModal
+            isOpen={isGuideOpen}
+            onClose={() => {
+              setIsGuideOpen(false);
+              localStorage.setItem('vpn_chess_welcome_seen', 'true');
+            }}
+          />
+
+          <ApkInstallModal
+            isOpen={isApkInstallOpen}
+            onClose={() => setIsApkInstallOpen(false)}
+          />
+
+          {isEditProfileOpen && (
+            <EditProfileModal
               user={user}
-              settings={settings}
-              onGameComplete={handleGameComplete}
-              onExit={() => setCurrentScreen('home')}
+              onSave={handleSaveProfile}
+              onClose={() => setIsEditProfileOpen(false)}
             />
           )}
-        </ErrorBoundary>
-      </main>
 
-      {/* Bottom Navigation Shell (Hidden during active match) */}
-      {currentScreen !== 'game' && (
-        <BottomNav activeTab={activeTab} onSelectTab={handleSelectTab} />
+          {isAuthOpen && (
+            <AuthModal
+              currentEmail={user?.jwtActive && user?.username ? (user.username.includes('@') ? user.username : `${(user.username || '').toLowerCase().replace(/\s+/g, '')}@sanctum.io`) : undefined}
+              onSuccess={(email, name, avatarUrl) => {
+                const username = name || email.split('@')[0];
+                const updated = {
+                  ...user,
+                  username: username,
+                  avatarUrl: avatarUrl || user.avatarUrl,
+                  linkedGoogle: true,
+                  jwtActive: true,
+                };
+                setUser(updated);
+                saveUserProfile(updated);
+              }}
+              onSignOut={handleSignOut}
+              onClose={() => setIsAuthOpen(false)}
+            />
+          )}
+        </div>
       )}
-
-      {/* Modals & Navigation Drawer */}
-      <NavDrawer
-        isOpen={isNavDrawerOpen}
-        user={user}
-        onClose={() => setIsNavDrawerOpen(false)}
-        onNavigate={handleNavigate}
-        onStartOffline={handleStartOfflineMatch}
-        onOpenAuth={() => setIsAuthOpen(true)}
-        onOpenErpAuth={() => setIsErpAuthOpen(true)}
-        onOpenApkInstall={() => setIsApkInstallOpen(true)}
-        onOpenGuide={() => setIsGuideOpen(true)}
-        onSignOut={handleSignOut}
-      />
-
-      <OnboardingModal
-        isOpen={isGuideOpen}
-        onClose={() => {
-          setIsGuideOpen(false);
-          localStorage.setItem('vpn_chess_welcome_seen', 'true');
-        }}
-      />
-
-      <ApkInstallModal
-        isOpen={isApkInstallOpen}
-        onClose={() => setIsApkInstallOpen(false)}
-      />
-
-      <ErpAuthModal
-        isOpen={isErpAuthOpen}
-        onClose={() => setIsErpAuthOpen(false)}
-        onLoginComplete={(session: ErpUserSession) => {
-          const updated = {
-            ...user,
-            username: session.name,
-            jwtActive: true,
-          };
-          setUser(updated);
-          saveUserProfile(updated);
-        }}
-      />
-
-      {isEditProfileOpen && (
-        <EditProfileModal
-          user={user}
-          onSave={handleSaveProfile}
-          onClose={() => setIsEditProfileOpen(false)}
-        />
-      )}
-
-      {isAuthOpen && (
-        <AuthModal
-          currentEmail={user?.jwtActive && user?.username ? (user.username.includes('@') ? user.username : `${(user.username || '').toLowerCase().replace(/\s+/g, '')}@sanctum.io`) : undefined}
-          onSuccess={(email, name, avatarUrl) => {
-            const username = name || email.split('@')[0];
-            const updated = {
-              ...user,
-              username: username,
-              avatarUrl: avatarUrl || user.avatarUrl,
-              linkedGoogle: true,
-              jwtActive: true,
-            };
-            setUser(updated);
-            saveUserProfile(updated);
-          }}
-          onSignOut={handleSignOut}
-          onClose={() => setIsAuthOpen(false)}
-        />
-      )}
-    </div>
+    </ErrorBoundary>
   );
 }

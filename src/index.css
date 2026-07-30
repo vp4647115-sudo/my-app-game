@@ -28,21 +28,61 @@
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
 
-/* Glassmorphism Luxury UI Cards */
+/* Glassmorphism Luxury UI Cards with Mobile Performance Optimizations */
 .glass-panel {
-  background: rgba(16, 18, 26, 0.90);
-  backdrop-filter: blur(28px);
-  -webkit-backdrop-filter: blur(28px);
+  background: rgba(16, 18, 26, 0.94);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 16px 40px 0 rgba(0, 0, 0, 0.65);
+  box-shadow: 0 10px 30px 0 rgba(0, 0, 0, 0.5);
 }
 
 .glass-card {
-  background: rgba(18, 20, 30, 0.88);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+  background: rgba(18, 20, 30, 0.92);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border: 1px solid rgba(212, 175, 55, 0.35);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+/* Mobile GPU performance overrides: Disable heavy backdrop filters on phone screens */
+@media (max-width: 768px) {
+  .glass-panel {
+    background: rgba(16, 18, 26, 0.97);
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  }
+
+  .glass-card {
+    background: rgba(18, 20, 30, 0.97);
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  }
+
+  .backdrop-blur-xl,
+  .backdrop-blur-lg,
+  .backdrop-blur-md,
+  .backdrop-blur-sm {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
+
+/* Ultra Low Latency Board Square Rules for Touchscreens */
+.board-square {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+  will-change: transform, background-color;
+  contain: layout paint style;
+}
+
+button, a, input, select {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .glass-card-hover {

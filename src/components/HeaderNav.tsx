@@ -3,20 +3,24 @@ import { UserProfile } from '../types';
 
 interface HeaderNavProps {
   user: UserProfile;
+  isAuthenticated?: boolean;
   onOpenMenu?: () => void;
   onOpenProfile?: () => void;
   onOpenSettings?: () => void;
   onOpenAuth?: () => void;
+  onSignOut?: () => void;
   showBack?: boolean;
   onBack?: () => void;
 }
 
 export const HeaderNav: React.FC<HeaderNavProps> = ({
   user,
+  isAuthenticated,
   onOpenMenu,
   onOpenProfile,
   onOpenSettings,
   onOpenAuth,
+  onSignOut,
   showBack,
   onBack,
 }) => {
@@ -54,15 +58,26 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({
       </div>
 
       <div className="flex items-center gap-2 md:gap-3">
-        {onOpenAuth && (
+        {isAuthenticated ? (
           <button
-            onClick={onOpenAuth}
-            className="px-3.5 py-1.5 bg-[#D4AF37] hover:bg-[#b8972e] text-[#121411] rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer shadow-md active:scale-95"
-            title="Sign In / Login to Account"
+            onClick={onSignOut || onOpenAuth}
+            className="px-3.5 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/40 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer shadow-md active:scale-95"
+            title="Sign Out / Logout"
           >
-            <span className="material-symbols-outlined text-sm font-bold">login</span>
-            <span>LOGIN</span>
+            <span className="material-symbols-outlined text-sm font-bold">logout</span>
+            <span>LOGOUT</span>
           </button>
+        ) : (
+          onOpenAuth && (
+            <button
+              onClick={onOpenAuth}
+              className="px-3.5 py-1.5 bg-[#D4AF37] hover:bg-[#b8972e] text-[#121411] rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer shadow-md active:scale-95"
+              title="Sign In / Login to Account"
+            >
+              <span className="material-symbols-outlined text-sm font-bold">login</span>
+              <span>LOGIN</span>
+            </button>
+          )
         )}
         {onOpenSettings && (
           <button
@@ -75,14 +90,18 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({
         )}
         <button
           onClick={onOpenProfile}
-          className="w-8 h-8 rounded-full overflow-hidden border-2 border-[#D4AF37]/60 hover:border-[#D4AF37] active:scale-95 transition-all cursor-pointer shadow-md"
+          className="w-8 h-8 rounded-full overflow-hidden border-2 border-[#D4AF37]/60 hover:border-[#D4AF37] active:scale-95 transition-all cursor-pointer shadow-md bg-[#1e201d] flex items-center justify-center"
           title="User Profile & Stats"
         >
-          <img
-            src={user.avatarUrl}
-            alt={user.username}
-            className="w-full h-full object-cover"
-          />
+          {user.avatarUrl && !user.avatarUrl.includes('googleusercontent.com') && !user.avatarUrl.includes('unsplash.com') ? (
+            <img
+              src={user.avatarUrl}
+              alt={user.username}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <span className="material-symbols-outlined text-lg text-[#D4AF37]">person</span>
+          )}
         </button>
       </div>
     </header>

@@ -1,5 +1,6 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { UserProfile, MatchHistoryItem, GameSettings } from '../types';
+import { saveFirebaseUserProfile, addFirebaseMatchHistory, auth as firebaseAuth } from './firebaseClient';
 
 // Safely obtain environment variables or localStorage keys for Supabase
 const env = (import.meta as unknown as { env?: Record<string, string> }).env || {};
@@ -88,7 +89,7 @@ export const DEFAULT_PROFILE: UserProfile = {
   title: 'PLAYER',
   country: 'UNITED KINGDOM',
   bio: 'Strategic chess enthusiast climbing the ranks in real-time matches.',
-  avatarUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuA6xTNEwFjfA7-dpbYxtGhuyRNVpjM3s7bt5AwyA06tElZEecAVhx26oEJIymkWKUGPyHZL4xu3uA2ayXLYORI-2Onlt3UmYmHbusMxjo3wNt2CtRAS5Nn1IBM18qZDBgPjHgZNdgCj32ikLQ0-ZAxPS-zHXkvbr9KrG6HigoItT6Guc70T18aZAspcgVla-k7YHbp-JWRy5jeIzgkod5HYaGpMfq_3uoOE8j5U1j9eoEveVSC7q8Qj27hi32RhtC0x50O2T_HVka5q',
+  avatarUrl: '',
   gamesPlayed: 0,
   wins: 0,
   losses: 0,
@@ -110,24 +111,49 @@ export const DEFAULT_SETTINGS: GameSettings = {
 // Real score match history (starts empty, only real matches are saved)
 export const DEFAULT_MATCH_HISTORY: MatchHistoryItem[] = [];
 
-// Profile storage API
-export function loadUserProfile(): UserProfile {
-  const saved = localStorage.getItem('vpn_chess_profile');
+// Profile storage API (scoped by user ID to prevent cross-account data leakage)
+export function loadUserProfile(userId?: string): UserProfile {
+  const targetKey = userId ? `vpn_chess_profile_${userId}` : 'vpn_chess_profile';
+  const saved = localStorage.getItem(targetKey) || localStorage.getItem('vpn_chess_profile');
   if (saved) {
     try {
-      return JSON.parse(saved);
+      const parsed = JSON.parse(saved);
+      if (parsed && typeof parsed === 'object') {
+        const rawAvatar = typeof parsed.avatarUrl === 'string' ? parsed.avatarUrl : '';
+        const isStockPhoto = rawAvatar.includes('googleusercontent.com') || rawAvatar.includes('unsplash.com');
+        return {
+          ...DEFAULT_PROFILE,
+          ...parsed,
+          id: userId || parsed.id || DEFAULT_PROFILE.id,
+          avatarUrl: isStockPhoto ? '' : rawAvatar,
+          elo: typeof parsed.elo === 'number' && !isNaN(parsed.elo) ? parsed.elo : DEFAULT_PROFILE.elo,
+          wins: typeof parsed.wins === 'number' && !isNaN(parsed.wins) ? parsed.wins : DEFAULT_PROFILE.wins,
+          losses: typeof parsed.losses === 'number' && !isNaN(parsed.losses) ? parsed.losses : DEFAULT_PROFILE.losses,
+          draws: typeof parsed.draws === 'number' && !isNaN(parsed.draws) ? parsed.draws : DEFAULT_PROFILE.draws,
+          gamesPlayed: typeof parsed.gamesPlayed === 'number' && !isNaN(parsed.gamesPlayed) ? parsed.gamesPlayed : DEFAULT_PROFILE.gamesPlayed,
+        };
+      }
     } catch (e) {
       console.error('Failed to parse saved profile:', e);
     }
   }
-  return DEFAULT_PROFILE;
+  return { ...DEFAULT_PROFILE, id: userId || DEFAULT_PROFILE.id };
 }
 
 // Track missing tables on current Supabase project to prevent 404 noise
 const missingTables = new Set<string>();
 
 export function saveUserProfile(profile: UserProfile): void {
+  const targetKey = profile.id ? `vpn_chess_profile_${profile.id}` : 'vpn_chess_profile';
+  localStorage.setItem(targetKey, JSON.stringify(profile));
   localStorage.setItem('vpn_chess_profile', JSON.stringify(profile));
+
+  // Sync to Firestore if Firebase Auth is active
+  if (firebaseAuth.currentUser) {
+    saveFirebaseUserProfile(firebaseAuth.currentUser.uid, profile).catch((e) =>
+      console.warn('Firebase profile sync notice:', e)
+    );
+  }
   
   // Try syncing to Supabase if connected and profiles table exists
   const client = getSupabase();
@@ -136,7 +162,7 @@ export function saveUserProfile(profile: UserProfile): void {
       client
         .from('profiles')
         .upsert({
-          id: profile.id,
+          user_id: profile.id,
           username: profile.username,
           elo: profile.elo,
           title: profile.title,
@@ -170,6 +196,21 @@ export function saveUserProfile(profile: UserProfile): void {
   }
 }
 
+// Clear all user cache on sign out
+export function clearUserCache(): void {
+  if (typeof localStorage === 'undefined') return;
+  const keysToRemove: string[] = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith('vpn_chess_')) {
+      if (key !== 'vpn_chess_welcome_seen' && key !== 'vpn_chess_supabase_url' && key !== 'vpn_chess_supabase_key') {
+        keysToRemove.push(key);
+      }
+    }
+  }
+  keysToRemove.forEach((k) => localStorage.removeItem(k));
+}
+
 // Match history API
 export function loadMatchHistory(): MatchHistoryItem[] {
   const saved = localStorage.getItem('vpn_chess_history');
@@ -187,6 +228,13 @@ export function addMatchHistoryItem(item: MatchHistoryItem): MatchHistoryItem[] 
   const current = loadMatchHistory();
   const updated = [item, ...current];
   localStorage.setItem('vpn_chess_history', JSON.stringify(updated));
+
+  // Sync to Firestore if Firebase Auth is active
+  if (firebaseAuth.currentUser) {
+    addFirebaseMatchHistory(firebaseAuth.currentUser.uid, item).catch((e) =>
+      console.warn('Firebase match history sync notice:', e)
+    );
+  }
 
   const client = getSupabase();
   if (client && !missingTables.has('matches')) {
