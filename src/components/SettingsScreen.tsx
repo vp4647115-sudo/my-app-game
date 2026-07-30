@@ -168,10 +168,13 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
               <span className="material-symbols-outlined text-[#D4AF37]">database</span>
               <div className="flex flex-col">
                 <span className="font-body text-[10px] font-bold text-[#c4c7c7] tracking-wider uppercase">
-                  DATABASE CONNECTION
+                  DATABASE & AUTH BACKENDS
                 </span>
                 <span className="font-body text-sm font-semibold text-[#FAF9F6]">
-                  {isSupabaseConfigured() ? 'Supabase DB Connected' : 'Express Local DB Active'}
+                  Firebase Firestore Cloud Active
+                </span>
+                <span className="font-body text-[11px] text-emerald-400">
+                  {isSupabaseConfigured() ? 'Firebase + Supabase DB' : 'Firebase Cloud Sync Enabled'}
                 </span>
               </div>
               <span

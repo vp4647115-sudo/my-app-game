@@ -5,6 +5,7 @@ import {
   saveSupabaseCredentials,
   isSupabaseReady,
 } from '../services/supabaseClient';
+import { signInWithGoogleFirebase, signOutFirebase } from '../services/firebaseClient';
 
 interface AuthModalProps {
   currentEmail?: string;
@@ -58,6 +59,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setGoogleLoading(true);
     setErrorMsg(null);
     setInfoMsg(null);
+
+    try {
+      // Try Firebase Google Sign-In first
+      const fbUser = await signInWithGoogleFirebase();
+      if (fbUser) {
+        onSuccess(
+          fbUser.email || 'grandmaster@firebase.com',
+          fbUser.displayName || 'Google Grandmaster',
+          fbUser.photoURL || undefined
+        );
+        onClose();
+        return;
+      }
+    } catch (fbErr: any) {
+      console.warn('Firebase Google Auth error/fallback:', fbErr?.message);
+    }
 
     const client = getSupabase();
 
@@ -115,13 +132,19 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       onSuccess(email);
       onClose();
     } catch (err: any) {
-      setErrorMsg(err.message || 'Authentication failed. Please verify credentials or Supabase key.');
+      const isRateLimit = err?.status === 429 || err?.message?.toLowerCase().includes('rate limit') || err?.message?.includes('429');
+      if (isRateLimit) {
+        setErrorMsg('Supabase auth rate limit reached (429). You can proceed as Guest or try again shortly.');
+      } else {
+        setErrorMsg(err.message || 'Authentication failed. Please verify credentials or Supabase key.');
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const handleLogout = async () => {
+    await signOutFirebase().catch(() => {});
     const client = getSupabase();
     if (client) {
       await client.auth.signOut();

@@ -10,6 +10,15 @@ import {
   getSupabase,
   DEFAULT_PROFILE,
 } from './services/supabaseClient';
+import {
+  auth as firebaseAuth,
+  getFirebaseUserProfile,
+  saveFirebaseUserProfile,
+  getFirebaseMatchHistory,
+  addFirebaseMatchHistory,
+  signOutFirebase,
+} from './services/firebaseClient';
+import { onAuthStateChanged } from 'firebase/auth';
 
 import { HeaderNav } from './components/HeaderNav';
 import { BottomNav, TabType } from './components/BottomNav';
@@ -43,9 +52,9 @@ export default function App() {
     return localStorage.getItem('vpn_chess_authenticated') === 'true';
   });
 
-  // Listen to Supabase Auth state dynamically
+  // Listen to Auth state (Supabase + Firebase)
   useEffect(() => {
-    let unsubscribe: (() => void) | null = null;
+    let unsubscribeSupa: (() => void) | null = null;
 
     const syncAuthSession = () => {
       const client = getSupabase();
@@ -99,15 +108,52 @@ export default function App() {
           }
         });
 
-        unsubscribe = () => subscription.unsubscribe();
+        unsubscribeSupa = () => subscription.unsubscribe();
       }
     };
 
     syncAuthSession();
 
+    // Firebase Auth State Listener
+    const unsubscribeFirebase = onAuthStateChanged(firebaseAuth, async (fbUser) => {
+      if (fbUser) {
+        const email = fbUser.email || '';
+        const displayName = fbUser.displayName || (email ? email.split('@')[0] : 'Grandmaster');
+        const photoURL = fbUser.photoURL || undefined;
+
+        // Fetch user profile from Firestore if available
+        const firestoreProfile = await getFirebaseUserProfile(fbUser.uid);
+
+        setUser((prev) => {
+          const updated: UserProfile = {
+            ...prev,
+            ...(firestoreProfile || {}),
+            id: fbUser.uid,
+            username: firestoreProfile?.username || displayName,
+            avatarUrl: photoURL || firestoreProfile?.avatarUrl || prev.avatarUrl,
+            linkedGoogle: true,
+            jwtActive: true,
+          };
+          saveUserProfile(updated);
+          saveFirebaseUserProfile(fbUser.uid, updated);
+          return updated;
+        });
+
+        // Sync match history from Firestore
+        const fbMatches = await getFirebaseMatchHistory(fbUser.uid);
+        if (fbMatches && fbMatches.length > 0) {
+          setMatchHistory(fbMatches);
+        }
+
+        setIsAuthenticated(true);
+        localStorage.setItem('vpn_chess_authenticated', 'true');
+      }
+    });
+
     window.addEventListener('vpn_chess_supabase_updated', syncAuthSession);
     return () => {
-      if (unsubscribe) unsubscribe();
+      if (unsubscribeSupa) unsubscribeSupa();
+      unsubscribeFirebase();
       window.removeEventListener('vpn_chess_supabase_updated', syncAuthSession);
     };
   }, []);
@@ -208,12 +254,21 @@ export default function App() {
 
     setUser(updatedUser);
     saveUserProfile(updatedUser);
+
+    if (firebaseAuth.currentUser?.uid) {
+      const uid = firebaseAuth.currentUser.uid;
+      saveFirebaseUserProfile(uid, updatedUser);
+      addFirebaseMatchHistory(uid, newItem);
+    }
   };
 
   // Save profile updates
   const handleSaveProfile = (updated: UserProfile) => {
     setUser(updated);
     saveUserProfile(updated);
+    if (firebaseAuth.currentUser?.uid) {
+      saveFirebaseUserProfile(firebaseAuth.currentUser.uid, updated);
+    }
   };
 
   // Login landing handlers
@@ -227,6 +282,9 @@ export default function App() {
         jwtActive: true,
       };
       saveUserProfile(updated);
+      if (firebaseAuth.currentUser?.uid) {
+        saveFirebaseUserProfile(firebaseAuth.currentUser.uid, updated);
+      }
       return updated;
     });
     setIsAuthenticated(true);
@@ -241,6 +299,7 @@ export default function App() {
   const handleSignOut = () => {
     setIsAuthenticated(false);
     localStorage.removeItem('vpn_chess_authenticated');
+    signOutFirebase().catch((err) => console.warn('Firebase signout error:', err));
     const client = getSupabase();
     if (client) {
       client.auth.signOut().catch((err) => console.warn('Supabase signout error:', err));

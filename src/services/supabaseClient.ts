@@ -123,12 +123,15 @@ export function loadUserProfile(): UserProfile {
   return DEFAULT_PROFILE;
 }
 
+// Track missing tables on current Supabase project to prevent 404 noise
+const missingTables = new Set<string>();
+
 export function saveUserProfile(profile: UserProfile): void {
   localStorage.setItem('vpn_chess_profile', JSON.stringify(profile));
   
-  // Try syncing to Supabase if connected
+  // Try syncing to Supabase if connected and profiles table exists
   const client = getSupabase();
-  if (client) {
+  if (client && !missingTables.has('profiles')) {
     try {
       client
         .from('profiles')
@@ -147,8 +150,19 @@ export function saveUserProfile(profile: UserProfile): void {
           updated_at: new Date().toISOString(),
         })
         .then(
-          () => {},
-          () => {}
+          (res) => {
+            if (res.error) {
+              const msg = res.error.message?.toLowerCase() || '';
+              if (res.status === 404 || msg.includes('does not exist') || msg.includes('relation') || res.error.code === 'PGRST204') {
+                missingTables.add('profiles');
+              }
+            }
+          },
+          (err) => {
+            if (err?.status === 404 || err?.message?.includes('404')) {
+              missingTables.add('profiles');
+            }
+          }
         );
     } catch (e) {
       // Ignore sync failure
@@ -175,7 +189,7 @@ export function addMatchHistoryItem(item: MatchHistoryItem): MatchHistoryItem[] 
   localStorage.setItem('vpn_chess_history', JSON.stringify(updated));
 
   const client = getSupabase();
-  if (client) {
+  if (client && !missingTables.has('matches')) {
     try {
       client
         .from('matches')
@@ -190,8 +204,19 @@ export function addMatchHistoryItem(item: MatchHistoryItem): MatchHistoryItem[] 
           mode: item.mode,
         })
         .then(
-          () => {},
-          () => {}
+          (res) => {
+            if (res.error) {
+              const msg = res.error.message?.toLowerCase() || '';
+              if (res.status === 404 || msg.includes('does not exist') || msg.includes('relation') || res.error.code === 'PGRST204') {
+                missingTables.add('matches');
+              }
+            }
+          },
+          (err) => {
+            if (err?.status === 404 || err?.message?.includes('404')) {
+              missingTables.add('matches');
+            }
+          }
         );
     } catch (e) {
       // Ignore sync failure

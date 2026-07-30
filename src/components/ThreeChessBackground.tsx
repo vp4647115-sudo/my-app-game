@@ -30,7 +30,7 @@ export const ThreeChessBackground: React.FC<ThreeChessBackgroundProps> = ({ lowP
         renderer.setSize(width, height);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.shadowMap.type = THREE.PCFShadowMap;
         container.appendChild(renderer.domElement);
       } catch (err) {
         console.warn('WebGL context unavailable for 3D background:', err);

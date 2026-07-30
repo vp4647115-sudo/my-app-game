@@ -5,6 +5,7 @@ import {
   saveSupabaseCredentials,
   isSupabaseReady,
 } from '../services/supabaseClient';
+import { signInWithGoogleFirebase } from '../services/firebaseClient';
 import { ErpAuthModal, ErpUserSession } from './ErpAuthModal';
 
 interface LoginLandingScreenProps {
@@ -59,6 +60,21 @@ export const LoginLandingScreen: React.FC<LoginLandingScreenProps> = ({
     setGoogleLoading(true);
     setErrorMsg(null);
     setInfoMsg(null);
+
+    try {
+      // Try Firebase Google Sign-In first
+      const fbUser = await signInWithGoogleFirebase();
+      if (fbUser) {
+        onLoginSuccess(
+          fbUser.email || 'grandmaster@firebase.com',
+          fbUser.displayName || 'Google Grandmaster',
+          fbUser.photoURL || undefined
+        );
+        return;
+      }
+    } catch (fbErr: any) {
+      console.warn('Firebase Google Auth error/fallback:', fbErr?.message);
+    }
 
     const client = getSupabase();
 
@@ -125,7 +141,12 @@ export const LoginLandingScreen: React.FC<LoginLandingScreenProps> = ({
       }
       onLoginSuccess(email, fullName || email.split('@')[0]);
     } catch (err: any) {
-      setErrorMsg(err.message || 'Authentication error. Please verify details.');
+      const isRateLimit = err?.status === 429 || err?.message?.toLowerCase().includes('rate limit') || err?.message?.includes('429');
+      if (isRateLimit) {
+        setErrorMsg('Supabase authentication rate limit reached (429). You can click "GUEST ENTER" below to play immediately without waiting!');
+      } else {
+        setErrorMsg(err.message || 'Authentication error. Please verify details.');
+      }
     } finally {
       setLoading(false);
     }

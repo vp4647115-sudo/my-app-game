@@ -1,0 +1,125 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "User profile with ELO ratings and stats",
+      "type": "object",
+      "properties": {
+        "username": {
+          "type": "string",
+          "maxLength": 50,
+          "minLength": 1
+        },
+        "avatarUrl": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "eloRating": {
+          "type": "number"
+        },
+        "wins": {
+          "type": "number"
+        },
+        "losses": {
+          "type": "number"
+        },
+        "draws": {
+          "type": "number"
+        },
+        "country": {
+          "type": "string",
+          "maxLength": 10
+        },
+        "isVpnProtected": {
+          "type": "boolean"
+        },
+        "vpnNode": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "username",
+        "eloRating"
+      ]
+    },
+    "MatchHistoryItem": {
+      "title": "Match History Item",
+      "description": "Historical record of completed chess game",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string"
+        },
+        "playerColor": {
+          "type": "string",
+          "enum": [
+            "w",
+            "b"
+          ]
+        },
+        "opponentName": {
+          "type": "string",
+          "maxLength": 50
+        },
+        "result": {
+          "type": "string",
+          "enum": [
+            "WIN",
+            "LOSS",
+            "DRAW"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "pgn": {
+          "type": "string",
+          "maxLength": 5000
+        },
+        "movesCount": {
+          "type": "number"
+        },
+        "eloDelta": {
+          "type": "number"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "mode": {
+          "type": "string",
+          "maxLength": 50
+        }
+      },
+      "required": [
+        "userId",
+        "result",
+        "timestamp"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/UserProfile"
+      },
+      "description": "User profile document"
+    },
+    "/users/{userId}/matches/{matchId}": {
+      "schema": {
+        "$ref": "#/entities/MatchHistoryItem"
+      },
+      "description": "Individual user match history"
+    }
+  }
+}
