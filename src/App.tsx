@@ -7,8 +7,8 @@ import {
   saveGameSettings,
   loadMatchHistory,
   addMatchHistoryItem,
-  isSupabaseConfigured,
-  supabase,
+  getSupabase,
+  DEFAULT_PROFILE,
 } from './services/supabaseClient';
 
 import { HeaderNav } from './components/HeaderNav';
@@ -43,66 +43,73 @@ export default function App() {
     return localStorage.getItem('vpn_chess_authenticated') === 'true';
   });
 
-  // Listen to Supabase Auth state if configured
+  // Listen to Supabase Auth state dynamically
   useEffect(() => {
-    if (isSupabaseConfigured && supabase) {
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session?.user?.email) {
-          const email = session.user.email;
-          const fullName = session.user.user_metadata?.full_name || session.user.user_metadata?.name || email.split('@')[0];
-          const avatar = session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture;
-          setUser((prev) => {
-            const updated = {
-              ...prev,
-              username: fullName,
-              avatarUrl: avatar || prev.avatarUrl,
-              linkedGoogle: session.user.app_metadata?.provider === 'google' || Boolean(session.user.user_metadata?.avatar_url),
-              jwtActive: true,
-            };
-            saveUserProfile(updated);
-            return updated;
-          });
-          setIsAuthenticated(true);
-          localStorage.setItem('vpn_chess_authenticated', 'true');
-        }
-      });
+    let unsubscribe: (() => void) | null = null;
 
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-        if (session?.user?.email) {
-          const email = session.user.email;
-          const fullName = session.user.user_metadata?.full_name || session.user.user_metadata?.name || email.split('@')[0];
-          const avatar = session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture;
-          setUser((prev) => {
-            const updated = {
-              ...prev,
-              username: fullName,
-              avatarUrl: avatar || prev.avatarUrl,
-              linkedGoogle: session.user.app_metadata?.provider === 'google' || Boolean(session.user.user_metadata?.avatar_url),
-              jwtActive: true,
-            };
-            saveUserProfile(updated);
-            return updated;
-          });
-          setIsAuthenticated(true);
-          localStorage.setItem('vpn_chess_authenticated', 'true');
-        } else if (_event === 'SIGNED_OUT') {
-          setIsAuthenticated(false);
-          localStorage.removeItem('vpn_chess_authenticated');
-          setUser((prev) => {
-            const updated = {
-              ...prev,
-              username: 'Alexander Thorne',
-              linkedGoogle: false,
-              jwtActive: false,
-            };
-            saveUserProfile(updated);
-            return updated;
-          });
-        }
-      });
+    const syncAuthSession = () => {
+      const client = getSupabase();
+      if (client) {
+        client.auth.getSession().then(({ data: { session } }) => {
+          if (session?.user?.email) {
+            const email = session.user.email;
+            const fullName = session.user.user_metadata?.full_name || session.user.user_metadata?.name || email.split('@')[0];
+            const avatar = session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture;
+            setUser((prev) => {
+              const updated = {
+                ...prev,
+                id: session.user.id || prev.id,
+                username: fullName,
+                avatarUrl: avatar || prev.avatarUrl,
+                linkedGoogle: session.user.app_metadata?.provider === 'google' || Boolean(session.user.user_metadata?.avatar_url),
+                jwtActive: true,
+              };
+              saveUserProfile(updated);
+              return updated;
+            });
+            setIsAuthenticated(true);
+            localStorage.setItem('vpn_chess_authenticated', 'true');
+          }
+        });
 
-      return () => subscription.unsubscribe();
-    }
+        const { data: { subscription } } = client.auth.onAuthStateChange((_event, session) => {
+          if (session?.user?.email) {
+            const email = session.user.email;
+            const fullName = session.user.user_metadata?.full_name || session.user.user_metadata?.name || email.split('@')[0];
+            const avatar = session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture;
+            setUser((prev) => {
+              const updated = {
+                ...prev,
+                id: session.user.id || prev.id,
+                username: fullName,
+                avatarUrl: avatar || prev.avatarUrl,
+                linkedGoogle: session.user.app_metadata?.provider === 'google' || Boolean(session.user.user_metadata?.avatar_url),
+                jwtActive: true,
+              };
+              saveUserProfile(updated);
+              return updated;
+            });
+            setIsAuthenticated(true);
+            localStorage.setItem('vpn_chess_authenticated', 'true');
+          } else if (_event === 'SIGNED_OUT') {
+            setIsAuthenticated(false);
+            localStorage.removeItem('vpn_chess_authenticated');
+            setUser(DEFAULT_PROFILE);
+            saveUserProfile(DEFAULT_PROFILE);
+          }
+        });
+
+        unsubscribe = () => subscription.unsubscribe();
+      }
+    };
+
+    syncAuthSession();
+
+    window.addEventListener('vpn_chess_supabase_updated', syncAuthSession);
+    return () => {
+      if (unsubscribe) unsubscribe();
+      window.removeEventListener('vpn_chess_supabase_updated', syncAuthSession);
+    };
   }, []);
 
   // Navigation State
@@ -234,8 +241,9 @@ export default function App() {
   const handleSignOut = () => {
     setIsAuthenticated(false);
     localStorage.removeItem('vpn_chess_authenticated');
-    if (isSupabaseConfigured && supabase) {
-      supabase.auth.signOut();
+    const client = getSupabase();
+    if (client) {
+      client.auth.signOut().catch((err) => console.warn('Supabase signout error:', err));
     }
   };
 

@@ -42,18 +42,43 @@ export function saveSupabaseCredentials(url: string, key: string): SupabaseClien
     localStorage.setItem('vpn_chess_supabase_url', url.trim());
     localStorage.setItem('vpn_chess_supabase_key', key.trim());
   }
-  return initSupabaseClient();
+  supabaseInstance = null;
+  const client = initSupabaseClient();
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('vpn_chess_supabase_updated'));
+  }
+  return client;
 }
 
-export const getSupabase = () => supabaseInstance || initSupabaseClient();
-export const supabase = supabaseInstance;
+export const getSupabase = (): SupabaseClient | null => {
+  if (!supabaseInstance) {
+    initSupabaseClient();
+  }
+  return supabaseInstance;
+};
+
+// Getter wrapper for legacy imports expecting `supabase` client variable
+export const supabase = {
+  get auth() {
+    const client = getSupabase();
+    if (!client) throw new Error('Supabase client is not configured.');
+    return client.auth;
+  },
+  from(table: string) {
+    const client = getSupabase();
+    if (!client) throw new Error('Supabase client is not configured.');
+    return client.from(table);
+  },
+} as unknown as SupabaseClient;
 
 export function isSupabaseReady(): boolean {
   const { url, key } = getSupabaseCredentials();
   return Boolean(url && key);
 }
 
-export const isSupabaseConfigured = isSupabaseReady();
+export function isSupabaseConfigured(): boolean {
+  return isSupabaseReady();
+}
 
 // Local default user profile matching real user score initialization
 export const DEFAULT_PROFILE: UserProfile = {

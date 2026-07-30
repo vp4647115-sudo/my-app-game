@@ -4,6 +4,7 @@ import { animate, stagger } from 'animejs';
 import { ActiveMatchConfig, UserProfile, GameSettings, MatchHistoryItem } from '../types';
 import { getAIMove, evaluateBoard } from '../services/aiEngine';
 import { soundService } from '../services/sound';
+import { useChessAudio } from '../hooks/useChessAudio';
 import { ChessPieceSvg, PieceStyle } from './ChessPieceSvg';
 
 interface ChessBoardGameProps {
@@ -62,29 +63,43 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
 
   const [turnNotice, setTurnNotice] = useState<string | null>(null);
 
+  // Pawn Promotion Dialog State
+  const [pendingPromotion, setPendingPromotion] = useState<{ from: Square; to: Square } | null>(null);
+
   // Keep gameRef updated to avoid stale state in polling interval
   const gameRef = useRef(game);
   useEffect(() => {
     gameRef.current = game;
   }, [game]);
 
+  // Active game ID counter to discard stale bot moves
+  const activeGameIdRef = useRef<number>(0);
+
   // Ref to ensure Bot doesn't trigger multiple times
   const botMovingRef = useRef<boolean>(false);
 
+  // Timestamp delta tracker for exact clock calculation across background tabs
+  const lastTickTimeRef = useRef<number>(Date.now());
+
+  const { playMove, playCapture, playCheck, playCastle, playPromote, playGameEnd, playDraw, playLowTime } = useChessAudio(settings);
+
   // Sound helper wrapper
   const playSnd = useCallback(
-    (type: 'move' | 'capture' | 'check' | 'end', victory?: boolean) => {
-      if (!settings.soundEnabled) return;
+    (type: 'move' | 'capture' | 'check' | 'end' | 'castle' | 'promote' | 'draw' | 'lowTime', victory?: boolean) => {
       try {
-        if (type === 'move') soundService.playMove(settings.volume);
-        else if (type === 'capture') soundService.playCapture(settings.volume);
-        else if (type === 'check') soundService.playCheck(settings.volume);
-        else if (type === 'end') soundService.playGameEnd(Boolean(victory), settings.volume);
+        if (type === 'move') playMove();
+        else if (type === 'capture') playCapture();
+        else if (type === 'check') playCheck();
+        else if (type === 'castle') playCastle();
+        else if (type === 'promote') playPromote();
+        else if (type === 'draw') playDraw();
+        else if (type === 'lowTime') playLowTime();
+        else if (type === 'end') playGameEnd(Boolean(victory));
       } catch (err) {
-        // Prevent audio context errors from leaking to console
+        // Audio error silent catch
       }
     },
-    [settings.soundEnabled, settings.volume]
+    [playMove, playCapture, playCheck, playCastle, playPromote, playDraw, playLowTime, playGameEnd]
   );
 
   // Anime.js Entrance Animation for Chessboard (Only once on mount)
@@ -170,12 +185,24 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
       if (g.isCheckmate()) {
         const winner = g.turn() === 'w' ? 'b' : 'w';
         if (winner === playerColor) {
+          playSnd('end', true);
           handleGameOver('WIN', 'Checkmate!');
         } else {
+          playSnd('end', false);
           handleGameOver('LOSS', 'Checkmate!');
         }
-      } else if (g.isDraw() || g.isStalemate() || g.isThreefoldRepetition()) {
-        handleGameOver('DRAW', 'Stalemate / Draw');
+      } else if (g.isStalemate()) {
+        playSnd('draw');
+        handleGameOver('DRAW', 'Draw by Stalemate');
+      } else if (g.isThreefoldRepetition()) {
+        playSnd('draw');
+        handleGameOver('DRAW', 'Draw by Threefold Repetition');
+      } else if (g.isInsufficientMaterial()) {
+        playSnd('draw');
+        handleGameOver('DRAW', 'Draw by Insufficient Material');
+      } else if (g.isDraw()) {
+        playSnd('draw');
+        handleGameOver('DRAW', 'Draw by 50-Move Rule');
       } else if (g.inCheck()) {
         playSnd('check');
       }
@@ -218,19 +245,30 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
   useEffect(() => {
     if (gameOverResult) return;
 
+    lastTickTimeRef.current = Date.now();
     const interval = setInterval(() => {
+      const now = Date.now();
+      const deltaSeconds = Math.max(1, Math.floor((now - lastTickTimeRef.current) / 1000));
+      lastTickTimeRef.current = now;
+
       const turn = game.turn();
       const isBottomTurn =
         config.mode === 'offline' ? turn === 'w' : turn === playerColor;
 
       if (isBottomTurn) {
-        setPlayerTime((t) => Math.max(0, t - 1));
+        setPlayerTime((t) => {
+          const next = Math.max(0, t - deltaSeconds);
+          if (next <= 10 && next > 0 && next < t) {
+            playSnd('lowTime');
+          }
+          return next;
+        });
       } else {
-        setOpponentTime((t) => Math.max(0, t - 1));
+        setOpponentTime((t) => Math.max(0, t - deltaSeconds));
       }
 
-      setMoveDuration((s) => s + 1);
-      setTotalMatchSeconds((s) => s + 1);
+      setMoveDuration((s) => s + deltaSeconds);
+      setTotalMatchSeconds((s) => s + deltaSeconds);
     }, 1000);
 
     return () => clearInterval(interval);
@@ -273,6 +311,7 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
     if (!isPlayerTurn && isBotOrOnlineMode && !botMovingRef.current) {
       botMovingRef.current = true;
       setIsBotThinking(true);
+      const currentId = activeGameIdRef.current;
 
       let diff = config.difficulty || 'medium';
       if (config.mode === 'online') {
@@ -285,12 +324,22 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
       // Simulate realistic human move delay for online matches (1.2s - 3.2s)
       const moveDelay = config.mode === 'online' ? Math.floor(Math.random() * 2000) + 1200 : 300;
 
-      getAIMove(game, diff)
+      getAIMove(gameRef.current, diff)
         .then((aiSan) => {
-          if (!aiSan) return;
+          if (!aiSan || activeGameIdRef.current !== currentId) {
+            setIsBotThinking(false);
+            botMovingRef.current = false;
+            return;
+          }
 
           setTimeout(() => {
-            const copy = new Chess(game.fen());
+            if (activeGameIdRef.current !== currentId) {
+              setIsBotThinking(false);
+              botMovingRef.current = false;
+              return;
+            }
+
+            const copy = new Chess(gameRef.current.fen());
             const moveRes = copy.move(aiSan);
             if (moveRes) {
               setGame(copy);
@@ -298,7 +347,9 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
               setMoveHistory(copy.history());
               setMoveDuration(0);
 
-              if (moveRes.captured) playSnd('capture');
+              if (moveRes.flags.includes('k') || moveRes.flags.includes('q')) playSnd('castle');
+              else if (moveRes.flags.includes('p')) playSnd('promote');
+              else if (moveRes.captured) playSnd('capture');
               else playSnd('move');
 
               checkGameEndConditions(copy);
@@ -322,11 +373,58 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
           botMovingRef.current = false;
         });
     }
-  }, [isPlayerTurn, game, config.mode, config.difficulty, config.opponentElo, gameOverResult, playSnd, checkGameEndConditions]);
+  }, [isPlayerTurn, config.mode, config.difficulty, config.opponentElo, gameOverResult, playSnd, checkGameEndConditions]);
+
+  // Execute Move Helper with Promotion
+  const executeMove = (from: Square, to: Square, promotion: 'q' | 'r' | 'b' | 'n' = 'q') => {
+    try {
+      const copy = new Chess(game.fen());
+      const moveRes = copy.move({ from, to, promotion });
+
+      if (moveRes) {
+        activeGameIdRef.current++;
+        setGame(copy);
+        setLastMove({ from, to });
+        setMoveHistory(copy.history());
+        setSelectedSquare(null);
+        setValidMoves([]);
+        setMoveDuration(0);
+
+        if (moveRes.flags.includes('k') || moveRes.flags.includes('q')) playSnd('castle');
+        else if (moveRes.flags.includes('p')) playSnd('promote');
+        else if (moveRes.captured) playSnd('capture');
+        else playSnd('move');
+
+        checkGameEndConditions(copy);
+
+        // If playing in friend mode, post move to room
+        if (config.mode === 'friend' && config.roomCode) {
+          fetch('/api/rooms/move', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              code: config.roomCode,
+              from,
+              to,
+              promotion,
+              fen: copy.fen(),
+              san: moveRes.san,
+            }),
+          }).catch(() => {});
+        }
+      } else {
+        setSelectedSquare(null);
+        setValidMoves([]);
+      }
+    } catch {
+      setSelectedSquare(null);
+      setValidMoves([]);
+    }
+  };
 
   // Handle Square Selection and Move Execution
   const handleSquareClick = (square: Square) => {
-    if (gameOverResult || isBotThinking) return;
+    if (gameOverResult || isBotThinking || pendingPromotion) return;
 
     if (!isPlayerTurn) {
       setTurnNotice("It is your opponent's turn to move!");
@@ -344,58 +442,53 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
       return;
     }
 
-    // If a square was already selected, attempt to move to square
+    // If a square was already selected, attempt to move
     if (selectedSquare) {
-      try {
-        const copy = new Chess(game.fen());
-        const moveRes = copy.move({
-          from: selectedSquare,
-          to: square,
-          promotion: 'q', // Auto queen
-        });
+      let targetSq = square;
+      const selectedPiece = game.get(selectedSquare);
 
-        if (moveRes) {
-          setGame(copy);
-          setLastMove({ from: selectedSquare, to: square });
-          setMoveHistory(copy.history());
-          setSelectedSquare(null);
-          setValidMoves([]);
-          setMoveDuration(0);
-
-          if (moveRes.captured) playSnd('capture');
-          else playSnd('move');
-
-          checkGameEndConditions(copy);
-
-          // If playing in friend mode, post move to room
-          if (config.mode === 'friend' && config.roomCode) {
-            fetch('/api/rooms/move', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                code: config.roomCode,
-                from: selectedSquare,
-                to: square,
-                promotion: 'q',
-                fen: copy.fen(),
-                san: moveRes.san,
-              }),
-            }).catch(() => {});
-          }
-        } else {
-          setSelectedSquare(null);
-          setValidMoves([]);
+      // Support castling by clicking the target rook
+      if (selectedPiece?.type === 'k') {
+        if (selectedSquare === 'e1') {
+          if (square === 'h1') targetSq = 'g1';
+          else if (square === 'a1') targetSq = 'c1';
+        } else if (selectedSquare === 'e8') {
+          if (square === 'h8') targetSq = 'g8';
+          else if (square === 'a8') targetSq = 'c8';
         }
-      } catch {
-        setSelectedSquare(null);
-        setValidMoves([]);
       }
+
+      // Check if this move is a Pawn Promotion
+      const isPawnPromotion =
+        selectedPiece?.type === 'p' &&
+        ((selectedPiece.color === 'w' && targetSq.endsWith('8')) ||
+          (selectedPiece.color === 'b' && targetSq.endsWith('1')));
+
+      if (isPawnPromotion) {
+        const moves = game.moves({ square: selectedSquare, verbose: true });
+        const isValid = moves.some((m) => m.to === targetSq);
+        if (isValid) {
+          setPendingPromotion({ from: selectedSquare, to: targetSq });
+          return;
+        }
+      }
+
+      executeMove(selectedSquare, targetSq, 'q');
     }
   };
 
   // Undo Move
   const handleUndo = () => {
     if (moveHistory.length === 0 || gameOverResult) return;
+    if (config.mode === 'online' || config.mode === 'friend') {
+      setTurnNotice('Undo is not available in live online matches!');
+      setTimeout(() => setTurnNotice(null), 2500);
+      return;
+    }
+    activeGameIdRef.current++;
+    botMovingRef.current = false;
+    setIsBotThinking(false);
+    setPendingPromotion(null);
     const copy = new Chess(game.fen());
     copy.undo(); // Undo AI move
     if (config.mode === 'bot') copy.undo(); // Undo Player move
@@ -408,6 +501,10 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
 
   // New Game Reset
   const handleNewGame = () => {
+    activeGameIdRef.current++;
+    botMovingRef.current = false;
+    setIsBotThinking(false);
+    setPendingPromotion(null);
     const newG = new Chess();
     setGame(newG);
     setSelectedSquare(null);
@@ -819,6 +916,34 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
             })
           )}
         </div>
+
+        {/* Pawn Promotion Options Overlay Modal */}
+        {pendingPromotion && (
+          <div className="absolute inset-0 bg-black/85 backdrop-blur-sm z-50 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center p-4 animate-fade-in">
+            <p className="font-headline text-xs sm:text-sm font-bold text-[#D4AF37] mb-3 uppercase tracking-wider">
+              Choose Pawn Promotion
+            </p>
+            <div className="flex gap-2 sm:gap-3 bg-[#121411] p-3 rounded-xl border border-[#D4AF37]/40 shadow-2xl">
+              {(['q', 'r', 'b', 'n'] as const).map((pType) => (
+                <button
+                  key={pType}
+                  onClick={() => {
+                    if (pendingPromotion) {
+                      const { from, to } = pendingPromotion;
+                      setPendingPromotion(null);
+                      executeMove(from, to, pType);
+                    }
+                  }}
+                  className="w-12 h-12 sm:w-14 sm:h-14 bg-[#262822] hover:bg-[#D4AF37]/20 border border-white/20 hover:border-[#D4AF37] rounded-lg flex items-center justify-center transition-all cursor-pointer active:scale-95 group shadow-lg"
+                >
+                  <div className="w-10 h-10 group-hover:scale-110 transition-transform">
+                    <ChessPieceSvg color={game.turn()} type={pType} style={activePieceStyle} />
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Player Card Header */}

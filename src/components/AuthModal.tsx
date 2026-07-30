@@ -266,12 +266,75 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <button
                 type="button"
                 onClick={() => setIsSignUp(!isSignUp)}
-                className="font-body text-xs text-[#c4c7c7] hover:text-[#D4AF37] transition-colors cursor-pointer"
+                className="font-body text-xs text-[#c4c7c7] hover:text-[#D4AF37] transition-colors cursor-pointer block w-full text-center"
               >
                 {isSignUp
                   ? 'Already have an account? Sign In'
                   : "Don't have an account? Register Now"}
               </button>
+            </div>
+
+            {/* Supabase Key Configuration Toggle */}
+            <div className="pt-2 border-t border-white/10 text-center">
+              <button
+                type="button"
+                onClick={() => setShowKeyConfig(!showKeyConfig)}
+                className="inline-flex items-center gap-1.5 font-body text-[11px] text-[#c4c7c7] hover:text-[#D4AF37] transition-colors cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-sm">
+                  {isConnected ? 'cloud_done' : 'settings_remote'}
+                </span>
+                <span>
+                  {isConnected
+                    ? 'Supabase Cloud Active (Click to edit credentials)'
+                    : 'Configure Custom Supabase Credentials'}
+                </span>
+              </button>
+
+              {showKeyConfig && (
+                <form onSubmit={handleSaveKeys} className="mt-3 p-4 bg-[#1e201d] rounded-xl border border-[#D4AF37]/30 text-left space-y-3 animate-fade-in">
+                  <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                    <span className="font-body text-xs font-bold text-[#D4AF37] uppercase tracking-wider">
+                      Supabase Configuration
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="block font-body text-[10px] font-bold text-[#c4c7c7] mb-1 uppercase">
+                      Supabase URL
+                    </label>
+                    <input
+                      type="url"
+                      required
+                      value={customUrl}
+                      onChange={(e) => setCustomUrl(e.target.value)}
+                      placeholder="https://xyz.supabase.co"
+                      className="w-full bg-[#121411] border border-white/10 rounded-lg px-3 py-2 font-mono text-xs text-[#FAF9F6] focus:outline-none focus:border-[#D4AF37]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-body text-[10px] font-bold text-[#c4c7c7] mb-1 uppercase">
+                      Anon Key
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      value={customKey}
+                      onChange={(e) => setCustomKey(e.target.value)}
+                      placeholder="eyJh..."
+                      className="w-full bg-[#121411] border border-white/10 rounded-lg px-3 py-2 font-mono text-xs text-[#FAF9F6] focus:outline-none focus:border-[#D4AF37]"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full py-2.5 rounded-lg bg-[#D4AF37] text-[#121411] font-body text-xs font-bold uppercase tracking-wider hover:brightness-110 transition-all cursor-pointer"
+                  >
+                    SAVE SUPABASE KEYS
+                  </button>
+                </form>
+              )}
             </div>
           </>
         )}

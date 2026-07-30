@@ -171,7 +171,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                   DATABASE CONNECTION
                 </span>
                 <span className="font-body text-sm font-semibold text-[#FAF9F6]">
-                  {isSupabaseConfigured ? 'Supabase DB Connected' : 'Express Local DB Active'}
+                  {isSupabaseConfigured() ? 'Supabase DB Connected' : 'Express Local DB Active'}
                 </span>
               </div>
               <span

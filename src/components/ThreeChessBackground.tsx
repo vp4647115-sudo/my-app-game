@@ -254,9 +254,10 @@ export const ThreeChessBackground: React.FC<ThreeChessBackgroundProps> = ({ lowP
         [0, 1.34],
       ]);
 
-      // King Cross Finial
+      // King Cross Finial & Collar Ring Accent
       const crossVertical = new THREE.BoxGeometry(0.08, 0.28, 0.08);
       const crossHorizontal = new THREE.BoxGeometry(0.2, 0.08, 0.08);
+      const ringGeo = new THREE.TorusGeometry(0.26, 0.03, 8, 20);
 
       const createPieceMesh = (type: 'p' | 'r' | 'n' | 'b' | 'q' | 'k', isWhite: boolean, x: number, z: number) => {
         const pieceGroup = new THREE.Group();
@@ -304,7 +305,6 @@ export const ThreeChessBackground: React.FC<ThreeChessBackgroundProps> = ({ lowP
         pieceGroup.add(mainMesh);
 
         // Gold Ring Collar Accent
-        const ringGeo = new THREE.TorusGeometry(0.26, 0.03, 8, 20);
         const ring = new THREE.Mesh(ringGeo, goldAccentMaterial);
         ring.rotation.x = Math.PI / 2;
         ring.position.y = 0.2;
@@ -384,15 +384,50 @@ export const ThreeChessBackground: React.FC<ThreeChessBackgroundProps> = ({ lowP
       };
 
       window.addEventListener('resize', handleResize);
+      window.addEventListener('orientationchange', handleResize);
+
+      return () => {
+        window.removeEventListener('resize', handleResize);
+        window.removeEventListener('orientationchange', handleResize);
+        if (animationFrameId) cancelAnimationFrame(animationFrameId);
+
+        // Dispose geometries & materials to prevent GPU memory leaks
+        pawnGeo.dispose();
+        rookGeo.dispose();
+        knightBaseGeo.dispose();
+        bishopGeo.dispose();
+        queenGeo.dispose();
+        kingGeo.dispose();
+        crossVertical.dispose();
+        crossHorizontal.dispose();
+        ringGeo.dispose();
+        gridBaseGeo.dispose();
+        frameOuterGeo.dispose();
+        bracketGeo.dispose();
+        particlesGeometry.dispose();
+
+        boardLightMaterial.dispose();
+        boardDarkMaterial.dispose();
+        goldInlayMaterial.dispose();
+        woodBorderMaterial.dispose();
+        whitePieceMaterial.dispose();
+        blackPieceMaterial.dispose();
+        goldAccentMaterial.dispose();
+        particlesMaterial.dispose();
+
+        if (renderer) {
+          renderer.dispose();
+          if (renderer.domElement && renderer.domElement.parentNode) {
+            renderer.domElement.parentNode.removeChild(renderer.domElement);
+          }
+        }
+      };
     };
 
-    setupScene();
+    const cleanup = setupScene();
 
     return () => {
-      if (animationFrameId) cancelAnimationFrame(animationFrameId);
-      if (renderer && renderer.domElement) {
-        renderer.domElement.remove();
-      }
+      if (cleanup) cleanup();
     };
   }, [lowPerformanceMode]);
 

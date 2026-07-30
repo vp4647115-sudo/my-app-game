@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { UserProfile, GameSettings, GeminiCoachResponse, GeminiPuzzleChallenge } from '../types';
 import { Chess, Square } from 'chess.js';
 import { ChessPieceSvg } from './ChessPieceSvg';
+import { useChessAudio } from '../hooks/useChessAudio';
 
 interface LearnAcademyScreenProps {
   user: UserProfile;
@@ -17,6 +18,7 @@ export const LearnAcademyScreen: React.FC<LearnAcademyScreenProps> = ({
   onStartMatch,
 }) => {
   const [activeTab, setActiveTab] = useState<'tutor' | 'puzzle' | 'openings' | 'practice'>('tutor');
+  const { playMove, playCapture, playGameEnd } = useChessAudio(settings);
 
   // --- Tutor Q&A State ---
   const [tutorQuestion, setTutorQuestion] = useState('');
@@ -130,10 +132,15 @@ export const LearnAcademyScreen: React.FC<LearnAcademyScreenProps> = ({
         if (targetSan && (playedSan === targetSan || playedSan.replace(/[+#]/g, '') === targetSan.replace(/[+#]/g, ''))) {
           setPuzzleSolved(true);
           setPuzzleFeedback(`🎉 EXCELLENT! Brilliant execution of ${playedSan}. ${puzzle?.explanation || ''}`);
+          setPuzzleChess(new Chess(puzzleChess.fen()));
+          playGameEnd(true);
         } else {
           setPuzzleFeedback(`Not quite the optimal tactic (you played ${playedSan}). Try again or analyze the board!`);
+          if (move.captured) playCapture();
+          else playMove();
           // Undo move
           puzzleChess.undo();
+          setPuzzleChess(new Chess(puzzleChess.fen()));
         }
       } else {
         const newPiece = puzzleChess.get(sq);
