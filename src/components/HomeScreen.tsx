@@ -100,27 +100,27 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ user, onNavigate, onStar
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.1 }}
           onClick={() => onNavigate('bot')}
-          className="w-full group relative p-3.5 rounded-xl glass-card glass-card-hover active:scale-[0.98] transition-all text-left cursor-pointer flex items-center justify-between overflow-hidden"
+          className="w-full group relative p-3.5 rounded-xl bg-[#141622]/95 backdrop-blur-md border border-[#D4AF37]/60 shadow-[0_8px_25px_rgba(0,0,0,0.7)] hover:border-[#D4AF37] hover:bg-[#1a1d2e] hover:shadow-[0_0_20px_rgba(212,175,55,0.25)] active:scale-[0.98] transition-all text-left cursor-pointer flex items-center justify-between overflow-hidden"
         >
           <div className="flex items-center gap-3 relative z-10">
-            <div className="w-10 h-10 rounded-lg bg-[#D4AF37]/20 border border-[#D4AF37]/50 flex items-center justify-center text-[#D4AF37] shrink-0">
+            <div className="w-10 h-10 rounded-lg bg-[#D4AF37]/25 border border-[#D4AF37] flex items-center justify-center text-[#D4AF37] shrink-0 shadow-[0_0_12px_rgba(212,175,55,0.3)]">
               <span className="material-symbols-outlined text-xl">smart_toy</span>
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="font-headline text-sm font-bold text-[#FFFFFF]">
+                <span className="font-headline text-sm font-bold text-[#FFFFFF] tracking-wide">
                   Play vs AI Engine
                 </span>
-                <span className="px-1.5 py-0.2 rounded-full text-[8px] font-bold uppercase bg-[#D4AF37] text-[#0B0B0F]">
+                <span className="px-1.5 py-0.5 rounded-full text-[8px] font-extrabold uppercase bg-[#D4AF37] text-[#0B0B0F] shadow-sm">
                   Stockfish
                 </span>
               </div>
-              <span className="block font-body text-[11px] text-[#A8A8A8]">
+              <span className="block font-body text-[11px] text-[#C0C0C0] font-medium">
                 Custom ELO Bots (800 - 2600) & Real-Time Eval
               </span>
             </div>
           </div>
-          <span className="material-symbols-outlined text-[#D4AF37] text-lg shrink-0">
+          <span className="material-symbols-outlined text-[#D4AF37] text-xl shrink-0 group-hover:translate-x-1 transition-transform">
             arrow_forward
           </span>
         </motion.button>
@@ -131,27 +131,27 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ user, onNavigate, onStar
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.15 }}
           onClick={() => onNavigate('arena')}
-          className="w-full group relative p-3.5 rounded-xl glass-card glass-card-hover active:scale-[0.98] transition-all text-left cursor-pointer flex items-center justify-between overflow-hidden"
+          className="w-full group relative p-3.5 rounded-xl bg-[#141622]/95 backdrop-blur-md border border-[#4DA8FF]/60 shadow-[0_8px_25px_rgba(0,0,0,0.7)] hover:border-[#4DA8FF] hover:bg-[#1a1d2e] hover:shadow-[0_0_20px_rgba(77,168,255,0.25)] active:scale-[0.98] transition-all text-left cursor-pointer flex items-center justify-between overflow-hidden"
         >
           <div className="flex items-center gap-3 relative z-10">
-            <div className="w-10 h-10 rounded-lg bg-[#4DA8FF]/20 border border-[#4DA8FF]/50 flex items-center justify-center text-[#4DA8FF] shrink-0">
+            <div className="w-10 h-10 rounded-lg bg-[#4DA8FF]/25 border border-[#4DA8FF] flex items-center justify-center text-[#4DA8FF] shrink-0 shadow-[0_0_12px_rgba(77,168,255,0.3)]">
               <span className="material-symbols-outlined text-xl">public</span>
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="font-headline text-sm font-bold text-[#FFFFFF]">
+                <span className="font-headline text-sm font-bold text-[#FFFFFF] tracking-wide">
                   Online Arena
                 </span>
-                <span className="px-1.5 py-0.2 rounded-full text-[8px] font-bold uppercase bg-[#4DA8FF] text-[#0B0B0F]">
+                <span className="px-1.5 py-0.5 rounded-full text-[8px] font-extrabold uppercase bg-[#4DA8FF] text-[#0B0B0F] shadow-sm">
                   Multiplayer
                 </span>
               </div>
-              <span className="block font-body text-[11px] text-[#A8A8A8]">
+              <span className="block font-body text-[11px] text-[#C0C0C0] font-medium">
                 Instant Matchmaking & Rated Tournaments
               </span>
             </div>
           </div>
-          <span className="material-symbols-outlined text-[#4DA8FF] text-lg shrink-0">
+          <span className="material-symbols-outlined text-[#4DA8FF] text-xl shrink-0 group-hover:translate-x-1 transition-transform">
             arrow_forward
           </span>
         </motion.button>
@@ -162,22 +162,22 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ user, onNavigate, onStar
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.2 }}
           onClick={() => onNavigate('friend')}
-          className="w-full group relative p-3.5 rounded-xl glass-card glass-card-hover active:scale-[0.98] transition-all text-left cursor-pointer flex items-center justify-between overflow-hidden"
+          className="w-full group relative p-3.5 rounded-xl bg-[#141622]/95 backdrop-blur-md border border-purple-500/60 shadow-[0_8px_25px_rgba(0,0,0,0.7)] hover:border-purple-400 hover:bg-[#1a1d2e] hover:shadow-[0_0_20px_rgba(168,85,247,0.25)] active:scale-[0.98] transition-all text-left cursor-pointer flex items-center justify-between overflow-hidden"
         >
           <div className="flex items-center gap-3 relative z-10">
-            <div className="w-10 h-10 rounded-lg bg-purple-500/20 border border-purple-500/50 flex items-center justify-center text-purple-400 shrink-0">
+            <div className="w-10 h-10 rounded-lg bg-purple-500/25 border border-purple-400 flex items-center justify-center text-purple-300 shrink-0 shadow-[0_0_12px_rgba(168,85,247,0.3)]">
               <span className="material-symbols-outlined text-xl">group</span>
             </div>
             <div>
-              <span className="block font-headline text-sm font-bold text-[#FFFFFF]">
+              <span className="block font-headline text-sm font-bold text-[#FFFFFF] tracking-wide">
                 Play with Friend
               </span>
-              <span className="block font-body text-[11px] text-[#A8A8A8]">
+              <span className="block font-body text-[11px] text-[#C0C0C0] font-medium">
                 Generate Room Code & Challenge
               </span>
             </div>
           </div>
-          <span className="material-symbols-outlined text-purple-400 text-lg shrink-0">
+          <span className="material-symbols-outlined text-purple-400 text-xl shrink-0 group-hover:translate-x-1 transition-transform">
             arrow_forward
           </span>
         </motion.button>
@@ -188,27 +188,27 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ user, onNavigate, onStar
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.25 }}
           onClick={() => onNavigate('learn')}
-          className="w-full group relative p-3.5 rounded-xl glass-card glass-card-hover active:scale-[0.98] transition-all text-left cursor-pointer flex items-center justify-between overflow-hidden"
+          className="w-full group relative p-3.5 rounded-xl bg-[#141622]/95 backdrop-blur-md border border-[#3DDC84]/60 shadow-[0_8px_25px_rgba(0,0,0,0.7)] hover:border-[#3DDC84] hover:bg-[#1a1d2e] hover:shadow-[0_0_20px_rgba(61,220,132,0.25)] active:scale-[0.98] transition-all text-left cursor-pointer flex items-center justify-between overflow-hidden"
         >
           <div className="flex items-center gap-3 relative z-10">
-            <div className="w-10 h-10 rounded-lg bg-[#3DDC84]/20 border border-[#3DDC84]/50 flex items-center justify-center text-[#3DDC84] shrink-0">
+            <div className="w-10 h-10 rounded-lg bg-[#3DDC84]/25 border border-[#3DDC84] flex items-center justify-center text-[#3DDC84] shrink-0 shadow-[0_0_12px_rgba(61,220,132,0.3)]">
               <span className="material-symbols-outlined text-xl">psychology</span>
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="font-headline text-sm font-bold text-[#FFFFFF]">
+                <span className="font-headline text-sm font-bold text-[#FFFFFF] tracking-wide">
                   Master Academy
                 </span>
-                <span className="px-1.5 py-0.2 rounded-full text-[8px] font-bold uppercase bg-[#3DDC84] text-[#0B0B0F]">
+                <span className="px-1.5 py-0.5 rounded-full text-[8px] font-extrabold uppercase bg-[#3DDC84] text-[#0B0B0F] shadow-sm">
                   Puzzles & AI
                 </span>
               </div>
-              <span className="block font-body text-[11px] text-[#A8A8A8]">
+              <span className="block font-body text-[11px] text-[#C0C0C0] font-medium">
                 Daily Tactical Puzzles & Opening Books
               </span>
             </div>
           </div>
-          <span className="material-symbols-outlined text-[#3DDC84] text-lg shrink-0">
+          <span className="material-symbols-outlined text-[#3DDC84] text-xl shrink-0 group-hover:translate-x-1 transition-transform">
             arrow_forward
           </span>
         </motion.button>
@@ -219,27 +219,27 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ user, onNavigate, onStar
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.3 }}
           onClick={onStartOffline}
-          className="w-full group relative p-3.5 rounded-xl glass-card glass-card-hover active:scale-[0.98] transition-all text-left cursor-pointer flex items-center justify-between overflow-hidden"
+          className="w-full group relative p-3.5 rounded-xl bg-[#141622]/95 backdrop-blur-md border border-amber-500/60 shadow-[0_8px_25px_rgba(0,0,0,0.7)] hover:border-amber-400 hover:bg-[#1a1d2e] hover:shadow-[0_0_20px_rgba(245,158,11,0.25)] active:scale-[0.98] transition-all text-left cursor-pointer flex items-center justify-between overflow-hidden"
         >
           <div className="flex items-center gap-3 relative z-10">
-            <div className="w-10 h-10 rounded-lg bg-amber-500/20 border border-amber-500/50 flex items-center justify-center text-amber-400 shrink-0">
+            <div className="w-10 h-10 rounded-lg bg-amber-500/25 border border-amber-400 flex items-center justify-center text-amber-300 shrink-0 shadow-[0_0_12px_rgba(245,158,11,0.3)]">
               <span className="material-symbols-outlined text-xl">phonelink_setup</span>
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="font-headline text-sm font-bold text-[#FFFFFF]">
+                <span className="font-headline text-sm font-bold text-[#FFFFFF] tracking-wide">
                   Offline Pass & Play
                 </span>
-                <span className="px-1.5 py-0.2 rounded-full text-[8px] font-bold uppercase bg-amber-500 text-[#0B0B0F]">
+                <span className="px-1.5 py-0.5 rounded-full text-[8px] font-extrabold uppercase bg-amber-500 text-[#0B0B0F] shadow-sm">
                   Local 2P
                 </span>
               </div>
-              <span className="block font-body text-[11px] text-[#A8A8A8]">
+              <span className="block font-body text-[11px] text-[#C0C0C0] font-medium">
                 Play locally on a single device offline
               </span>
             </div>
           </div>
-          <span className="material-symbols-outlined text-amber-400 text-lg shrink-0">
+          <span className="material-symbols-outlined text-amber-400 text-xl shrink-0 group-hover:translate-x-1 transition-transform">
             arrow_forward
           </span>
         </motion.button>
