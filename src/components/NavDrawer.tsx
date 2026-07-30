@@ -10,6 +10,7 @@ interface NavDrawerProps {
   onOpenAuth: () => void;
   onOpenErpAuth?: () => void;
   onOpenApkInstall?: () => void;
+  onOpenGuide?: () => void;
   onSignOut: () => void;
 }
 
@@ -22,6 +23,7 @@ export const NavDrawer: React.FC<NavDrawerProps> = ({
   onOpenAuth,
   onOpenErpAuth,
   onOpenApkInstall,
+  onOpenGuide,
   onSignOut,
 }) => {
   if (!isOpen) return null;
@@ -197,6 +199,22 @@ export const NavDrawer: React.FC<NavDrawerProps> = ({
               <span className="material-symbols-outlined text-[#D4AF37] text-xl">login</span>
               <span>Login & Account</span>
             </button>
+
+            {onOpenGuide && (
+              <button
+                onClick={() => {
+                  onOpenGuide();
+                  onClose();
+                }}
+                className="w-full flex items-center gap-3.5 px-4 py-3 rounded-xl bg-[#D4AF37]/15 hover:bg-[#D4AF37]/25 border border-[#D4AF37]/30 text-[#D4AF37] transition-colors text-left cursor-pointer active:scale-[0.98]"
+              >
+                <span className="material-symbols-outlined text-xl">help_outline</span>
+                <div className="flex flex-col">
+                  <span className="font-bold text-xs">New Member Instructions</span>
+                  <span className="text-[9px] opacity-80">Software Usage & Features Guide</span>
+                </div>
+              </button>
+            )}
 
             {onOpenApkInstall && (
               <button

@@ -140,7 +140,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-[#D4AF37]">lock</span>
             <h3 className="font-headline text-xl font-bold text-[#FAF9F6]">
-              {currentEmail ? 'Account Sanctum' : isSignUp ? 'Create Sanctum Account' : 'Sign In to Master'}
+              {currentEmail ? 'VPN Chess Account' : isSignUp ? 'Create VPN Chess Account' : 'Sign In to VPN Chess'}
             </h3>
           </div>
           <button
@@ -149,66 +149,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           >
             <span className="material-symbols-outlined">close</span>
           </button>
-        </div>
-
-        {/* Supabase Status & Key Setup Toggle */}
-        <div className="bg-[#121411]/60 p-3 rounded-xl border border-white/10 text-[11px] space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-[#c4c7c7] font-body flex items-center gap-2">
-              <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
-              <span>Supabase Auth: {isConnected ? 'Connected & Active' : 'Key Required'}</span>
-            </span>
-            <button
-              type="button"
-              onClick={() => setShowKeyConfig(!showKeyConfig)}
-              className="text-[#D4AF37] hover:underline font-bold text-[10px] cursor-pointer flex items-center gap-1"
-            >
-              <span className="material-symbols-outlined text-xs">key</span>
-              <span>{showKeyConfig ? 'Hide Key Setup' : 'Configure Supabase Key'}</span>
-            </button>
-          </div>
-
-          {/* Config Keys Panel */}
-          {showKeyConfig && (
-            <form onSubmit={handleSaveKeys} className="pt-2 border-t border-white/10 space-y-2.5 text-left">
-              <p className="text-[10px] text-[#c4c7c7]/80">
-                Enter your Supabase Project URL and Anon API key to connect live authentication & database persistence:
-              </p>
-              <div>
-                <label className="block text-[9px] font-bold text-[#D4AF37] uppercase tracking-wider mb-1">
-                  Supabase Project URL
-                </label>
-                <input
-                  type="url"
-                  required
-                  value={customUrl}
-                  onChange={(e) => setCustomUrl(e.target.value)}
-                  placeholder="https://xyzproject.supabase.co"
-                  className="w-full bg-[#1e201d] border border-white/15 rounded-lg px-3 py-1.5 font-mono text-xs text-[#FAF9F6] focus:outline-none focus:border-[#D4AF37]"
-                />
-              </div>
-              <div>
-                <label className="block text-[9px] font-bold text-[#D4AF37] uppercase tracking-wider mb-1">
-                  Supabase Anon Key
-                </label>
-                <input
-                  type="password"
-                  required
-                  value={customKey}
-                  onChange={(e) => setCustomKey(e.target.value)}
-                  placeholder="eyJhbGciOiJIUzI1NiIsInR..."
-                  className="w-full bg-[#1e201d] border border-white/15 rounded-lg px-3 py-1.5 font-mono text-xs text-[#FAF9F6] focus:outline-none focus:border-[#D4AF37]"
-                />
-              </div>
-              <button
-                type="submit"
-                className="w-full py-2 bg-[#D4AF37] text-[#121411] hover:bg-[#b5952f] rounded-lg font-body text-xs font-bold uppercase tracking-wider transition-all cursor-pointer shadow active:scale-95 flex items-center justify-center gap-1.5"
-              >
-                <span className="material-symbols-outlined text-sm">save</span>
-                <span>{keySaveSuccess ? 'KEYS CONNECTED!' : 'SAVE & INITIALIZE SUPABASE'}</span>
-              </button>
-            </form>
-          )}
         </div>
 
         {errorMsg && (

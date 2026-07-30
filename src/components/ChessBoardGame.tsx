@@ -87,29 +87,37 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
     [settings.soundEnabled, settings.volume]
   );
 
-  // Anime.js Entrance Animation for Chessboard
+  // Anime.js Entrance Animation for Chessboard (Only once on mount)
   useEffect(() => {
     if (!settings.lowPerformanceMode) {
-      animate('.board-square', {
-        scale: [0.85, 1],
-        opacity: [0, 1],
-        delay: stagger(10, { grid: [8, 8], from: 'center' }),
-        duration: 600,
-        ease: 'outElastic(1, 0.8)',
-      });
+      try {
+        animate('.board-square', {
+          scale: [0.95, 1],
+          opacity: [0, 1],
+          delay: stagger(6, { grid: [8, 8], from: 'center' }),
+          duration: 350,
+          ease: 'outQuad',
+        });
+      } catch (err) {
+        console.warn('Board square animation skipped:', err);
+      }
     }
-  }, [settings.lowPerformanceMode]);
+  }, []);
 
   // Anime.js Last Move Impact Animation
   useEffect(() => {
     if (lastMove && !settings.lowPerformanceMode) {
-      animate('.last-move-sq', {
-        scale: [1.2, 1],
-        duration: 350,
-        ease: 'outBack',
-      });
+      try {
+        animate('.last-move-sq', {
+          scale: [1.08, 1],
+          duration: 200,
+          ease: 'outQuad',
+        });
+      } catch (err) {
+        console.warn('Last move animation skipped:', err);
+      }
     }
-  }, [lastMove, settings.lowPerformanceMode]);
+  }, [lastMove]);
 
   // Gemini AI In-Game Coach State
   const [isGeminiCoachOpen, setIsGeminiCoachOpen] = useState(false);
@@ -239,15 +247,24 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
     }
   }, [playerTime, opponentTime, gameOverResult, handleGameOver]);
 
-  // AI Bot Turn Execution
+  // AI Bot & Online Opponent Turn Execution
   useEffect(() => {
     if (gameOverResult) return;
 
-    if (!isPlayerTurn && config.mode === 'bot' && !botMovingRef.current) {
+    const isBotOrOnlineMode = config.mode === 'bot' || config.mode === 'online';
+
+    if (!isPlayerTurn && isBotOrOnlineMode && !botMovingRef.current) {
       botMovingRef.current = true;
       setIsBotThinking(true);
 
-      const diff = config.difficulty || 'medium';
+      let diff = config.difficulty || 'medium';
+      if (config.mode === 'online') {
+        const elo = config.opponentElo || 2000;
+        if (elo >= 2800) diff = 'grandmaster';
+        else if (elo >= 2400) diff = 'master';
+        else diff = 'hard';
+      }
+
       getAIMove(game, diff)
         .then((aiSan) => {
           if (!aiSan) return;
@@ -274,7 +291,7 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
           botMovingRef.current = false;
         });
     }
-  }, [isPlayerTurn, game, config.mode, config.difficulty, gameOverResult, playSnd, checkGameEndConditions]);
+  }, [isPlayerTurn, game, config.mode, config.difficulty, config.opponentElo, gameOverResult, playSnd, checkGameEndConditions]);
 
   // Handle Square Selection and Move Execution
   const handleSquareClick = (square: Square) => {
@@ -358,6 +375,44 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
     playSnd('move');
   };
 
+  // New Game Reset
+  const handleNewGame = () => {
+    const newG = new Chess();
+    setGame(newG);
+    setSelectedSquare(null);
+    setValidMoves([]);
+    setLastMove(null);
+    setMoveHistory([]);
+    setGameOverResult(null);
+    setPlayerTime(config.timeControlMinutes * 60);
+    setOpponentTime(config.timeControlMinutes * 60);
+    setMoveDuration(0);
+    playSnd('move');
+  };
+
+  // Auto Move / Hint
+  const handleAutoMove = () => {
+    if (gameOverResult || isBotThinking) return;
+    setIsBotThinking(true);
+    getAIMove(game, config.difficulty || 'medium')
+      .then((aiSan) => {
+        if (!aiSan) return;
+        const copy = new Chess(game.fen());
+        const moveRes = copy.move(aiSan);
+        if (moveRes) {
+          setGame(copy);
+          setLastMove({ from: moveRes.from, to: moveRes.to });
+          setMoveHistory(copy.history());
+          setMoveDuration(0);
+          if (moveRes.captured) playSnd('capture');
+          else playSnd('move');
+          checkGameEndConditions(copy);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setIsBotThinking(false));
+  };
+
   // Resign
   const handleResign = () => {
     if (confirm('Are you sure you want to resign the match?')) {
@@ -390,91 +445,92 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
     }
     switch (activeBoardTheme) {
       case 'emerald':
-        return isDarkSquare ? 'bg-[#1B3B2B]' : 'bg-[#E8E4D8]';
+        return isDarkSquare ? 'bg-[#2E5A44]' : 'bg-[#E2DDD0]';
       case 'obsidian':
         return isDarkSquare ? 'bg-[#161B22]' : 'bg-[#38444D]';
       case 'royal':
         return isDarkSquare ? 'bg-[#1A2332]' : 'bg-[#E5E9F0]';
       case 'marble':
-        return isDarkSquare ? 'bg-[#2B2B2B]' : 'bg-[#F2F2F0]';
+        return isDarkSquare ? 'bg-[#423838]' : 'bg-[#FAF9F6]';
       case 'walnut':
       default:
-        return isDarkSquare ? 'bg-[#3D2B24]' : 'bg-[#D7BA89]';
+        // Tournament Wood Theme (Matching Uploaded Screenshot): Warm Golden Birch & Walnut
+        return isDarkSquare ? 'bg-[#9A663A]' : 'bg-[#DEC085]';
     }
   };
 
   const isCheckState = game.inCheck();
 
   return (
-    <div className="pt-16 pb-24 px-4 max-w-2xl mx-auto flex flex-col items-center justify-center min-h-screen text-[#e3e3de] relative">
+    <div className="pt-14 pb-16 px-2.5 max-w-[420px] mx-auto flex flex-col items-center justify-center min-h-[calc(100vh-3.5rem)] text-[#e3e3de] relative">
       {/* Turn Notice Alert Banner */}
       {turnNotice && (
-        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-[#D4AF37] text-[#121411] px-5 py-2.5 rounded-xl font-body text-xs font-bold shadow-2xl animate-bounce flex items-center gap-2">
-          <span className="material-symbols-outlined text-base">info</span>
+        <div className="fixed top-14 left-1/2 -translate-x-1/2 z-50 bg-[#D4AF37] text-[#121411] px-4 py-1.5 rounded-lg font-body text-xs font-bold shadow-2xl animate-bounce flex items-center gap-1.5">
+          <span className="material-symbols-outlined text-sm">info</span>
           <span>{turnNotice}</span>
         </div>
       )}
 
       {/* Auto Check Warning Banner */}
       {isCheckState && (
-        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-red-600 text-white px-6 py-2.5 rounded-xl font-headline text-sm font-bold tracking-widest uppercase shadow-[0_0_30px_rgba(220,38,38,0.8)] animate-pulse flex items-center gap-2 border border-red-300">
-          <span className="material-symbols-outlined text-lg">warning</span>
+        <div className="fixed top-14 left-1/2 -translate-x-1/2 z-50 bg-red-600 text-white px-4 py-1.5 rounded-lg font-headline text-xs font-bold tracking-widest uppercase shadow-[0_0_20px_rgba(220,38,38,0.8)] animate-pulse flex items-center gap-1.5 border border-red-300">
+          <span className="material-symbols-outlined text-sm">warning</span>
           <span>KING IS IN CHECK!</span>
         </div>
       )}
 
       {/* Top Match Bar Header */}
-      <div className="w-full flex items-center justify-between mb-4">
+      <div className="w-full flex items-center justify-between mb-2">
         <button
           onClick={onExit}
-          className="p-2 rounded-lg glass-panel hover:bg-white/10 active:scale-95 transition-all text-[#c4c7c7] flex items-center gap-1.5 text-xs font-body cursor-pointer"
+          className="p-1.5 rounded-lg glass-panel hover:bg-white/10 active:scale-95 transition-all text-[#c4c7c7] flex items-center gap-1 text-[11px] font-body cursor-pointer"
         >
-          <span className="material-symbols-outlined text-sm">arrow_back</span>
-          <span>Exit Sanctum</span>
+          <span className="material-symbols-outlined text-xs">arrow_back</span>
+          <span>Exit</span>
         </button>
 
         {/* Graphics Customization Toggle */}
         <div className="relative">
           <button
             onClick={() => setShowStyleMenu(!showStyleMenu)}
-            className="px-3 py-1.5 rounded-lg glass-panel hover:bg-white/10 active:scale-95 transition-all text-[#D4AF37] border border-[#D4AF37]/30 flex items-center gap-1.5 text-xs font-body font-bold cursor-pointer"
+            className="px-2.5 py-1 rounded-lg glass-panel hover:bg-white/10 active:scale-95 transition-all text-[#D4AF37] border border-[#D4AF37]/30 flex items-center gap-1 text-[11px] font-body font-bold cursor-pointer"
           >
-            <span className="material-symbols-outlined text-sm">palette</span>
-            <span>Board & Pieces</span>
+            <span className="material-symbols-outlined text-xs">palette</span>
+            <span>Style</span>
             <span className="material-symbols-outlined text-xs">expand_more</span>
           </button>
 
           {/* Graphics Customization Dropdown Panel */}
           {showStyleMenu && (
-            <div className="absolute right-0 top-10 z-50 glass-panel p-4 rounded-xl border border-white/15 shadow-2xl w-64 space-y-4 animate-fade-in">
-              <div className="flex justify-between items-center border-b border-white/10 pb-2">
-                <span className="font-headline text-xs font-bold text-[#FAF9F6]">GRAPHICS CUSTOMIZER</span>
+            <div className="absolute right-0 top-9 z-50 glass-panel p-3 rounded-xl border border-white/15 shadow-2xl w-56 space-y-3 animate-fade-in">
+              <div className="flex justify-between items-center border-b border-white/10 pb-1.5">
+                <span className="font-headline text-[10px] font-bold text-[#FAF9F6]">GRAPHICS CUSTOMIZER</span>
                 <button
                   onClick={() => setShowStyleMenu(false)}
                   className="text-white/60 hover:text-white"
                 >
-                  <span className="material-symbols-outlined text-sm">close</span>
+                  <span className="material-symbols-outlined text-xs">close</span>
                 </button>
               </div>
 
               {/* Board Theme Options */}
-              <div className="space-y-1.5">
-                <span className="text-[10px] font-bold text-[#D4AF37] uppercase tracking-wider block">
+              <div className="space-y-1">
+                <span className="text-[9px] font-bold text-[#D4AF37] uppercase tracking-wider block">
                   Board Theme
                 </span>
-                <div className="grid grid-cols-2 gap-1.5 text-[11px]">
+                <div className="grid grid-cols-2 gap-1 text-[10px]">
                   {[
-                    { id: 'walnut', label: 'Walnut & Gold' },
-                    { id: 'emerald', label: 'Emerald Pearl' },
-                    { id: 'obsidian', label: 'Obsidian Neon' },
-                    { id: 'royal', label: 'Royal Sapphire' },
+                    { id: 'walnut', label: 'Walnut Wood' },
+                    { id: 'emerald', label: 'Emerald' },
+                    { id: 'obsidian', label: 'Obsidian' },
+                    { id: 'royal', label: 'Sapphire' },
                   ].map((theme) => (
                     <button
                       key={theme.id}
                       onClick={() => {
                         setActiveBoardTheme(theme.id as any);
                       }}
-                      className={`px-2 py-1.5 rounded text-left border transition-all cursor-pointer ${
+                      className={`px-2 py-1 rounded text-left border transition-all cursor-pointer ${
                         activeBoardTheme === theme.id
                           ? 'bg-[#D4AF37] text-[#121411] font-bold border-[#D4AF37]'
                           : 'bg-white/5 text-[#c4c7c7] border-white/10 hover:bg-white/10'
@@ -487,23 +543,23 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
               </div>
 
               {/* Piece Set Options */}
-              <div className="space-y-1.5">
-                <span className="text-[10px] font-bold text-[#D4AF37] uppercase tracking-wider block">
-                  Piece Set Style
+              <div className="space-y-1">
+                <span className="text-[9px] font-bold text-[#D4AF37] uppercase tracking-wider block">
+                  Piece Style
                 </span>
-                <div className="grid grid-cols-2 gap-1.5 text-[11px]">
+                <div className="grid grid-cols-2 gap-1 text-[10px]">
                   {[
-                    { id: 'neo-grandmaster', label: 'Neo-Grandmaster' },
-                    { id: 'classic-staunton', label: 'Classic Staunton' },
+                    { id: 'neo-grandmaster', label: 'Grandmaster' },
+                    { id: 'classic-staunton', label: 'Staunton' },
                     { id: '3d-metallic', label: '3D Metallic' },
-                    { id: 'minimalist', label: 'Minimalist' },
+                    { id: 'minimalist', label: 'Minimal' },
                   ].map((pStyle) => (
                     <button
                       key={pStyle.id}
                       onClick={() => {
                         setActivePieceStyle(pStyle.id as PieceStyle);
                       }}
-                      className={`px-2 py-1.5 rounded text-left border transition-all cursor-pointer ${
+                      className={`px-2 py-1 rounded text-left border transition-all cursor-pointer ${
                         activePieceStyle === pStyle.id
                           ? 'bg-[#D4AF37] text-[#121411] font-bold border-[#D4AF37]'
                           : 'bg-white/5 text-[#c4c7c7] border-white/10 hover:bg-white/10'
@@ -520,42 +576,42 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
       </div>
 
       {/* Opponent Card Header */}
-      <div className="w-full glass-panel p-3.5 rounded-xl flex items-center justify-between mb-3 border border-white/10 shadow-lg">
-        <div className="flex items-center gap-3">
-          <div className="relative">
+      <div className="w-full glass-panel px-3 py-2 rounded-xl flex items-center justify-between mb-1.5 border border-white/10 shadow-md">
+        <div className="flex items-center gap-2.5">
+          <div className="relative shrink-0">
             <img
               src={
                 config.opponentAvatar ||
                 'https://lh3.googleusercontent.com/aida-public/AB6AXuDStYFdzyUT63P-_K2DGhNguEomRVy1t4uTZuZbnzRRYSP6UH5egIzIdxPtKeIMNUvhp3CRZXdXs0PtiMmboH3AlvpB4gnzBfvznzEvKMZ-u4EaReuXSot3pl8FefLThPUc7BgqJ7NIoPT-KJ_FZzhbslnKjz5svMxipf_dvY9g5FyGqu_o4MQlOGYwAsAjJKOOTz58a2KHF7w35hmK0i-H2nvH8FHqrsx-zcjOJ-7l_MZXt5KBBnMYSdQzyUwGjTUTexKzl5oXBngK'
               }
               alt={config.opponentName}
-              className="w-10 h-10 rounded-full object-cover border border-[#D4AF37]/40"
+              className="w-8 h-8 rounded-full object-cover border border-[#D4AF37]/40"
             />
             {isBotThinking && (
-              <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-[#D4AF37] rounded-full animate-ping" />
+              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-[#D4AF37] rounded-full animate-ping" />
             )}
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <span className="font-headline text-sm font-bold text-[#FAF9F6]">
+            <div className="flex items-center gap-1.5">
+              <span className="font-headline text-xs font-bold text-[#FAF9F6]">
                 {config.opponentName}
               </span>
-              <span className="bg-[#333532] text-[#D4AF37] text-[9px] font-bold px-1.5 py-0.5 rounded">
+              <span className="bg-[#333532] text-[#D4AF37] text-[8px] font-bold px-1 py-0.2 rounded">
                 {config.opponentElo}
               </span>
             </div>
             {isBotThinking ? (
-              <span className="font-body text-[10px] text-[#D4AF37] animate-pulse">
+              <span className="font-body text-[9px] text-[#D4AF37] animate-pulse">
                 Thinking move...
               </span>
             ) : (
-              <span className="font-body text-[10px] text-[#c4c7c7]/80 flex items-center gap-1 font-semibold">
+              <span className="font-body text-[9px] text-[#c4c7c7]/80 flex items-center gap-1 font-semibold">
                 {config.mode === 'offline'
                   ? game.turn() === 'b'
                     ? "Black's Turn"
                     : "White's Turn"
                   : isTopClockActive
-                  ? "Opponent's turn to move"
+                  ? "Opponent's turn"
                   : 'Waiting...'}
               </span>
             )}
@@ -563,38 +619,33 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
         </div>
 
         {/* Opponent Clock */}
-        <div className="flex flex-col items-end gap-0.5">
+        <div className="flex flex-col items-end gap-0.5 shrink-0">
           <div
-            className={`px-4 py-2 rounded-lg font-headline text-lg font-bold tracking-wider transition-all flex items-center gap-2 ${
+            className={`px-3 py-1 rounded-lg font-headline text-sm font-bold tracking-wider transition-all flex items-center gap-1.5 ${
               isTopClockActive
-                ? 'bg-[#FAF9F6] text-[#121411] shadow-xl scale-105 ring-2 ring-[#D4AF37]'
+                ? 'bg-[#FAF9F6] text-[#121411] shadow-md ring-2 ring-[#D4AF37]'
                 : 'bg-[#1a1a1a] text-[#c4c7c7]'
             }`}
           >
             {isTopClockActive && (
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
             )}
             <span>{formatTime(opponentTime)}</span>
           </div>
-          {isTopClockActive && (
-            <span className="text-[10px] text-[#D4AF37] font-bold font-mono">
-              {moveDuration}s move time
-            </span>
-          )}
         </div>
       </div>
 
       {/* Engine Position Evaluation Meter */}
-      <div className="w-full h-1.5 bg-[#333532] rounded-full mb-3 overflow-hidden border border-white/5 relative">
+      <div className="w-full h-1 bg-[#333532] rounded-full my-1 overflow-hidden border border-white/5 relative">
         <div
-          className="h-full bg-[#FAF9F6] transition-all duration-500"
+          className="h-full bg-[#FAF9F6] transition-all duration-300"
           style={{ width: `${evalPercent}%` }}
         />
       </div>
 
       {/* Redesigned Graphic Chessboard Container */}
-      <div className={`w-full aspect-square max-w-[460px] ${settings.lowPerformanceMode ? 'bg-[#181a17]' : 'glass-panel'} rounded-2xl p-2 md:p-3 border-2 border-[#D4AF37]/40 shadow-2xl relative`}>
-        <div className="w-full h-full grid grid-cols-8 grid-rows-8 rounded-xl overflow-hidden shadow-2xl border border-white/10">
+      <div className="w-full aspect-square max-w-[350px] sm:max-w-[390px] bg-[#6E4826] p-2 rounded-xl sm:rounded-2xl border-2 sm:border-4 border-[#8B5E34] shadow-[0_12px_32px_rgba(0,0,0,0.8)] relative my-0.5">
+        <div className="w-full h-full grid grid-cols-8 grid-rows-8 rounded-lg overflow-hidden shadow-inner border border-[#4A2E16]">
           {rows.map((row) =>
             cols.map((col) => {
               const square = `${col}${row}` as Square;
@@ -610,7 +661,7 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
               // High Graphic Background Styles
               let bgClass = getSquareColor(isDarkSquare);
 
-              if (isSelected) bgClass = 'bg-[#D4AF37]/80 ring-4 ring-amber-300 z-30 shadow-2xl';
+              if (isSelected) bgClass = 'bg-[#F2D06B]/80 ring-4 ring-amber-300 z-30 shadow-2xl';
               else if (isKingInCheck) bgClass = 'bg-red-600/90 shadow-[0_0_25px_rgba(239,68,68,1)] animate-pulse z-30';
               else if (isLastMove) bgClass += ' ring-2 ring-[#D4AF37]/60 bg-blend-overlay';
 
@@ -668,79 +719,81 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
       </div>
 
       {/* Player Card Header */}
-      <div className="w-full glass-panel p-3.5 rounded-xl flex items-center justify-between mt-3 border border-white/10 shadow-lg">
-        <div className="flex items-center gap-3">
+      <div className="w-full glass-panel px-3 py-2 rounded-xl flex items-center justify-between mt-1.5 border border-white/10 shadow-md">
+        <div className="flex items-center gap-2.5">
           <img
             src={user.avatarUrl}
             alt={user.username}
-            className="w-10 h-10 rounded-full object-cover border border-[#D4AF37]/50"
+            className="w-8 h-8 rounded-full object-cover border border-[#D4AF37]/50 shrink-0"
           />
           <div>
-            <div className="flex items-center gap-2">
-              <span className="font-headline text-sm font-bold text-[#FAF9F6]">
+            <div className="flex items-center gap-1.5">
+              <span className="font-headline text-xs font-bold text-[#FAF9F6]">
                 {user.username}
               </span>
-              <span className="bg-[#333532] text-[#D4AF37] text-[9px] font-bold px-1.5 py-0.5 rounded">
+              <span className="bg-[#333532] text-[#D4AF37] text-[8px] font-bold px-1 py-0.2 rounded">
                 {user.elo}
               </span>
             </div>
-            <span className="font-body text-[10px] text-[#c4c7c7]/80 flex items-center gap-1 font-semibold">
+            <span className="font-body text-[9px] text-[#c4c7c7]/80 flex items-center gap-1 font-semibold">
               {config.mode === 'offline'
                 ? game.turn() === 'w'
                   ? "White's Turn"
                   : "Black's Turn"
                 : isBottomClockActive
-                ? 'Your turn to move'
-                : 'Waiting for opponent...'}
+                ? 'Your turn'
+                : 'Waiting...'}
             </span>
           </div>
         </div>
 
         {/* Player Clock */}
-        <div className="flex flex-col items-end gap-0.5">
+        <div className="flex flex-col items-end gap-0.5 shrink-0">
           <div
-            className={`px-4 py-2 rounded-lg font-headline text-lg font-bold tracking-wider transition-all flex items-center gap-2 ${
+            className={`px-3 py-1 rounded-lg font-headline text-sm font-bold tracking-wider transition-all flex items-center gap-1.5 ${
               isBottomClockActive
-                ? 'bg-[#FAF9F6] text-[#121411] shadow-xl scale-105 ring-2 ring-[#D4AF37]'
+                ? 'bg-[#FAF9F6] text-[#121411] shadow-md ring-2 ring-[#D4AF37]'
                 : 'bg-[#1a1a1a] text-[#c4c7c7]'
             }`}
           >
             {isBottomClockActive && (
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
             )}
             <span>{formatTime(playerTime)}</span>
           </div>
-          {isBottomClockActive && (
-            <span className="text-[10px] text-[#D4AF37] font-bold font-mono">
-              {moveDuration}s move time
-            </span>
-          )}
         </div>
       </div>
 
-      {/* Bottom Game Controls */}
-      <div className="w-full flex items-center justify-between gap-2.5 mt-4">
+      {/* Bottom Tournament Control Buttons Row */}
+      <div className="w-full flex items-center justify-between gap-1.5 mt-2.5">
+        <button
+          onClick={handleAutoMove}
+          disabled={isBotThinking}
+          className="flex-1 py-2 rounded-lg bg-[#221D18] hover:bg-[#2E2822] text-[#E0D5C1] border border-white/10 text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all cursor-pointer active:scale-95 shadow flex items-center justify-center gap-1"
+        >
+          MOVE
+        </button>
+
         <button
           onClick={handleUndo}
           disabled={moveHistory.length === 0}
-          className="flex-1 py-2.5 rounded-lg glass-panel text-xs font-body font-bold text-[#c4c7c7] hover:text-[#FAF9F6] border border-white/10 active:scale-95 transition-all disabled:opacity-40 cursor-pointer"
+          className="flex-1 py-2 rounded-lg bg-[#221D18] hover:bg-[#2E2822] text-[#E0D5C1] border border-white/10 text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-40 cursor-pointer active:scale-95 shadow flex items-center justify-center gap-1"
         >
-          Undo Move
+          UNDO
         </button>
 
         <button
-          onClick={handleFetchGeminiCoach}
-          className="flex-1 py-2.5 rounded-lg bg-[#D4AF37]/15 hover:bg-[#D4AF37]/25 text-xs font-body font-bold text-[#D4AF37] border border-[#D4AF37]/40 active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-md"
+          onClick={handleNewGame}
+          className="flex-1 py-2 rounded-lg bg-[#2A231C] hover:bg-[#382E25] text-[#E6C265] border border-[#C29B38] text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all cursor-pointer active:scale-95 shadow flex items-center justify-center gap-1 font-headline"
         >
-          <span className="material-symbols-outlined text-sm">psychology</span>
-          <span>Chess Master</span>
+          NEW GAME
         </button>
 
         <button
-          onClick={handleResign}
-          className="flex-1 py-2.5 rounded-lg glass-panel text-xs font-body font-bold text-red-400 border border-red-400/20 hover:bg-red-400/10 active:scale-95 transition-all cursor-pointer"
+          onClick={() => setShowStyleMenu(!showStyleMenu)}
+          className="flex-1 py-2 rounded-lg bg-[#221D18] hover:bg-[#2E2822] text-[#E0D5C1] border border-white/10 text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all cursor-pointer active:scale-95 shadow flex items-center justify-center gap-1"
         >
-          Resign Match
+          STYLE
         </button>
       </div>
 

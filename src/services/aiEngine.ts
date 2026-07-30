@@ -125,8 +125,8 @@ export async function getAIMove(
     const possibleMoves = workingGame.moves({ verbose: true });
     if (possibleMoves.length === 0) return null;
 
-    // Add small artificial delay for realistic bot thinking
-    const delayMs = Math.min(800, 200 + Math.random() * 400);
+    // Artificial delay for realistic online/bot thinking without lagging UI
+    const delayMs = Math.min(350, 100 + Math.random() * 200);
     await new Promise((resolve) => setTimeout(resolve, delayMs));
 
     // Fallback default move
@@ -150,7 +150,8 @@ export async function getAIMove(
     else if (difficulty === 'grandmaster') searchDepth = 3;
 
     let nodesEvaluated = 0;
-    const MAX_NODES = 1200;
+    const MAX_NODES = 800;
+    const startTime = Date.now();
 
     function minimaxBounded(
       g: Chess,
@@ -160,7 +161,7 @@ export async function getAIMove(
       isMaximizing: boolean
     ): number {
       nodesEvaluated++;
-      if (depth === 0 || g.isGameOver() || nodesEvaluated >= MAX_NODES) {
+      if (depth === 0 || g.isGameOver() || nodesEvaluated >= MAX_NODES || (Date.now() - startTime > 100)) {
         return evaluateBoard(g);
       }
 

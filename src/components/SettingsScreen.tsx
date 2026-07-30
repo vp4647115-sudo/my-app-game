@@ -8,6 +8,7 @@ interface SettingsScreenProps {
   onUpdateSettings: (newSettings: GameSettings) => void;
   onOpenEditProfile: () => void;
   onOpenApkInstall?: () => void;
+  onOpenGuide?: () => void;
   onSignOut: () => void;
   onBack?: () => void;
 }
@@ -18,9 +19,12 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   onUpdateSettings,
   onOpenEditProfile,
   onOpenApkInstall,
+  onOpenGuide,
   onSignOut,
   onBack,
 }) => {
+  const [showPrivacyPolicy, setShowPrivacyPolicy] = React.useState<boolean>(false);
+
   const handleToggleSound = (e: React.ChangeEvent<HTMLInputElement>) => {
     onUpdateSettings({ ...settings, soundEnabled: e.target.checked });
   };
@@ -294,6 +298,50 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           </div>
         </section>
 
+        {/* Privacy Policy & Data Security Card */}
+        <section className="glass-panel rounded-xl p-6 flex flex-col space-y-4 border border-white/10 shadow-lg md:col-span-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="material-symbols-outlined text-2xl text-[#D4AF37]">policy</span>
+              <div>
+                <h3 className="font-headline text-lg font-bold text-[#FAF9F6]">Privacy Policy & Data Security</h3>
+                <p className="text-xs text-[#c4c7c7]">
+                  Learn how VPN Chess safeguards your account, gameplay logs, and local device privacy.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowPrivacyPolicy(true)}
+              className="px-5 py-2.5 bg-white/10 hover:bg-white/20 text-[#FAF9F6] border border-white/15 font-bold text-xs rounded-xl uppercase tracking-wider transition-all cursor-pointer active:scale-95 shadow-md flex items-center gap-1.5 shrink-0"
+            >
+              <span className="material-symbols-outlined text-sm">menu_book</span>
+              <span>READ PRIVACY POLICY</span>
+            </button>
+          </div>
+        </section>
+
+        {/* Software Instructions & New Member Guide Card */}
+        {onOpenGuide && (
+          <section className="glass-panel rounded-xl p-6 flex flex-col space-y-4 border border-[#D4AF37]/30 shadow-lg md:col-span-2 bg-[#D4AF37]/5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-2xl text-[#D4AF37]">help_outline</span>
+                <div>
+                  <h3 className="font-headline text-lg font-bold text-[#FAF9F6]">New Member Guide & Software Instructions</h3>
+                  <p className="text-xs text-[#c4c7c7]">Interactive walkthrough explaining game modes, bots, online rooms, and features.</p>
+                </div>
+              </div>
+              <button
+                onClick={onOpenGuide}
+                className="px-5 py-2.5 bg-[#D4AF37] hover:bg-[#b8972e] text-[#121411] font-bold text-xs rounded-xl uppercase tracking-wider transition-all cursor-pointer active:scale-95 shadow-md flex items-center gap-1.5 shrink-0"
+              >
+                <span className="material-symbols-outlined text-sm">auto_stories</span>
+                <span>OPEN GUIDE</span>
+              </button>
+            </div>
+          </section>
+        )}
+
         {/* APK / App Installation Card */}
         {onOpenApkInstall && (
           <section className="glass-panel rounded-xl p-6 flex flex-col space-y-4 border border-[#D4AF37]/30 shadow-lg md:col-span-2 bg-[#D4AF37]/5">
@@ -316,6 +364,98 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           </section>
         )}
       </div>
+
+      {/* PRIVACY POLICY MODAL */}
+      {showPrivacyPolicy && (
+        <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
+          <div className="relative w-full max-w-2xl max-h-[85vh] bg-[#121411] border border-[#D4AF37]/50 rounded-3xl p-6 md:p-8 shadow-2xl text-[#e3e3de] flex flex-col">
+            {/* Header */}
+            <div className="flex justify-between items-center pb-4 border-b border-white/10 shrink-0">
+              <div className="flex items-center gap-2.5">
+                <span className="material-symbols-outlined text-[#D4AF37] text-2xl font-bold">policy</span>
+                <div>
+                  <h3 className="font-headline text-xl font-bold text-[#FAF9F6]">
+                    VPN Chess Privacy Policy & Terms
+                  </h3>
+                  <p className="text-[10px] text-[#c4c7c7] uppercase tracking-wider">
+                    Effective Date: July 2026 • Version 2.4
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowPrivacyPolicy(false)}
+                className="p-1.5 rounded-full hover:bg-white/10 text-[#c4c7c7] hover:text-[#FAF9F6] transition-colors cursor-pointer"
+                title="Close Modal"
+              >
+                <span className="material-symbols-outlined text-xl">close</span>
+              </button>
+            </div>
+
+            {/* Scrollable Body */}
+            <div className="overflow-y-auto my-4 pr-2 space-y-6 text-xs md:text-sm text-[#c4c7c7] leading-relaxed">
+              <section className="space-y-2">
+                <h4 className="font-bold text-[#D4AF37] text-sm uppercase tracking-wider flex items-center gap-2">
+                  <span className="material-symbols-outlined text-base">shield</span>
+                  1. Zero Unnecessary Data Harvesting
+                </h4>
+                <p>
+                  VPN Chess is built with a privacy-first engineering philosophy. We do not sell, rent, monetise, or distribute personal user information to advertising brokers, trackers, or data aggregators.
+                </p>
+              </section>
+
+              <section className="space-y-2">
+                <h4 className="font-bold text-[#D4AF37] text-sm uppercase tracking-wider flex items-center gap-2">
+                  <span className="material-symbols-outlined text-base">key</span>
+                  2. Account Authentication & Security
+                </h4>
+                <p>
+                  When you create an account, password hashes are salted and encrypted using industry-standard hashing protocols (bcrypt/Argon2id). Anonymous or Guest play operates entirely in your local browser storage without requiring personal email or phone registration.
+                </p>
+              </section>
+
+              <section className="space-y-2">
+                <h4 className="font-bold text-[#D4AF37] text-sm uppercase tracking-wider flex items-center gap-2">
+                  <span className="material-symbols-outlined text-base">swap_calls</span>
+                  3. Gameplay Logs & Real-Time Match Data
+                </h4>
+                <p>
+                  To provide ELO rating calculations, PGN move histories, and room sync in multiplayer matches, move algebraic notation (FEN & PGN) is stored transiently on encrypted backend servers. Matches can be downloaded locally by the player at any time.
+                </p>
+              </section>
+
+              <section className="space-y-2">
+                <h4 className="font-bold text-[#D4AF37] text-sm uppercase tracking-wider flex items-center gap-2">
+                  <span className="material-symbols-outlined text-base">storage</span>
+                  4. Local Storage & Cookie Usage
+                </h4>
+                <p>
+                  We utilize local client storage (`localStorage`) strictly to preserve your visual preferences (board theme, piece style, volume level, low-end performance mode toggle) and offline game states.
+                </p>
+              </section>
+
+              <section className="space-y-2">
+                <h4 className="font-bold text-[#D4AF37] text-sm uppercase tracking-wider flex items-center gap-2">
+                  <span className="material-symbols-outlined text-base">delete_forever</span>
+                  5. User Rights & Account Erasure
+                </h4>
+                <p>
+                  You retain full control over your data. You may request account deletion or wipe local storage preferences at any time directly through the app profile settings or by contacting support.
+                </p>
+              </section>
+            </div>
+
+            {/* Footer button */}
+            <div className="pt-4 border-t border-white/10 shrink-0 flex justify-end">
+              <button
+                onClick={() => setShowPrivacyPolicy(false)}
+                className="px-6 py-2.5 bg-[#D4AF37] hover:bg-[#b8972e] text-[#121411] font-bold text-xs rounded-xl uppercase tracking-wider transition-all cursor-pointer shadow active:scale-95"
+              >
+                I AGREE & UNDERSTAND
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Danger Zone / Logout */}
       <div className="pt-6 border-t border-white/10 text-center">

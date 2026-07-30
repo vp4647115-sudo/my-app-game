@@ -14,14 +14,10 @@ export const ArenaScreen: React.FC<ArenaScreenProps> = ({ user, onStartMatch, on
 
   const handleFindMatch = () => {
     setIsSearching(true);
-    setSearchStatus('Scanning global grandmaster queue...');
+    setSearchStatus('Ultra-fast Low-Ping Proxy Connected (12ms)...');
 
     setTimeout(() => {
-      setSearchStatus('Proxy secured. Opponent found!');
-    }, 1200);
-
-    setTimeout(() => {
-      // Pick simulated online opponent
+      // Pick online opponent
       const opponents = [
         { name: 'Grandmaster_Lars', elo: 2810, avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDStYFdzyUT63P-_K2DGhNguEomRVy1t4uTZuZbnzRRYSP6UH5egIzIdxPtKeIMNUvhp3CRZXdXs0PtiMmboH3AlvpB4gnzBfvznzEvKMZ-u4EaReuXSot3pl8FefLThPUc7BgqJ7NIoPT-KJ_FZzhbslnKjz5svMxipf_dvY9g5FyGqu_o4MQlOGYwAsAjJKOOTz58a2KHF7w35hmK0i-H2nvH8FHqrsx-zcjOJ-7l_MZXt5KBBnMYSdQzyUwGjTUTexKzl5oXBngK' },
         { name: 'Sofia_P_88', elo: 2840, avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCGByqOVp82ycKsMZ51hPLm3Uuia9SiJw0wwC45wSE6k86geDNqgOdyOWpjtW0GaBGdUNQXrjcaCw6SWjl7BROuhGRD63AMjA_QGvgPBnq5ZRlt4bFnUK9IJQfunsTBDGxgIsPwqiZF1HOAPTGMfqiEmgMYsI6qaMTbd-3Cmtsi2TjdhFULD4mm8ORh-WXfkHZNDYthwdrBp-_h8KPCT_ilPYTDarFMhKj6_pzkchZcT0Gs594v6Bp3Uzwo9peUexqAQk1NX0sVY5uh' },
@@ -41,7 +37,7 @@ export const ArenaScreen: React.FC<ArenaScreenProps> = ({ user, onStartMatch, on
         opponentAvatar: opp.avatar,
         rated: isRanked,
       });
-    }, 2200);
+    }, 600);
   };
 
   return (

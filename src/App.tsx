@@ -29,6 +29,7 @@ import { AuthModal } from './components/AuthModal';
 import { LoginLandingScreen } from './components/LoginLandingScreen';
 import { NavDrawer } from './components/NavDrawer';
 import { ApkInstallModal } from './components/ApkInstallModal';
+import { OnboardingModal } from './components/OnboardingModal';
 import { ErpAuthModal, ErpUserSession } from './components/ErpAuthModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
@@ -119,6 +120,9 @@ export default function App() {
   const [isErpAuthOpen, setIsErpAuthOpen] = useState(false);
   const [isNavDrawerOpen, setIsNavDrawerOpen] = useState(false);
   const [isApkInstallOpen, setIsApkInstallOpen] = useState(false);
+  const [isGuideOpen, setIsGuideOpen] = useState<boolean>(() => {
+    return localStorage.getItem('vpn_chess_welcome_seen') !== 'true';
+  });
 
   // Synchronize Tab with Screen
   const handleSelectTab = (tab: TabType) => {
@@ -245,7 +249,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#121411] text-[#e3e3de] font-body relative overflow-x-hidden">
+    <div className="min-h-screen bg-[#0B0B0F] text-[#FFFFFF] font-body relative overflow-x-hidden selection:bg-[#D4AF37] selection:text-[#0B0B0F]">
       {/* 3D Background Canvas (shown on Home, Arena, Bot screens) */}
       {currentScreen !== 'game' && (
         <ThreeChessBackground lowPerformanceMode={settings.lowPerformanceMode} />
@@ -325,6 +329,7 @@ export default function App() {
               onUpdateSettings={handleUpdateSettings}
               onOpenEditProfile={() => setIsEditProfileOpen(true)}
               onOpenApkInstall={() => setIsApkInstallOpen(true)}
+              onOpenGuide={() => setIsGuideOpen(true)}
               onSignOut={handleSignOut}
               onBack={currentScreen === 'settings' && activeTab === 'home' ? () => setCurrentScreen('home') : undefined}
             />
@@ -357,7 +362,16 @@ export default function App() {
         onOpenAuth={() => setIsAuthOpen(true)}
         onOpenErpAuth={() => setIsErpAuthOpen(true)}
         onOpenApkInstall={() => setIsApkInstallOpen(true)}
+        onOpenGuide={() => setIsGuideOpen(true)}
         onSignOut={handleSignOut}
+      />
+
+      <OnboardingModal
+        isOpen={isGuideOpen}
+        onClose={() => {
+          setIsGuideOpen(false);
+          localStorage.setItem('vpn_chess_welcome_seen', 'true');
+        }}
       />
 
       <ApkInstallModal

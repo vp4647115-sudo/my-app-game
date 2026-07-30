@@ -140,85 +140,41 @@ export const LoginLandingScreen: React.FC<LoginLandingScreenProps> = ({
       <div className="absolute bottom-10 right-10 w-80 h-80 bg-emerald-500/5 rounded-full blur-[100px] pointer-events-none" />
 
       <div className="relative z-10 w-full max-w-md space-y-6">
-        {/* Logo & Branding Header */}
+        {/* Logo & Branding Header with Enter Game Action */}
         <div className="text-center space-y-3">
-          <div className="inline-flex items-center justify-center p-4 bg-[#FAF9F6]/5 rounded-2xl border border-[#D4AF37]/30 shadow-2xl backdrop-blur-md">
-            <span className="material-symbols-outlined text-4xl text-[#D4AF37]">
+          <button
+            type="button"
+            onClick={onPlayAsGuest}
+            className="inline-flex items-center justify-center p-4 bg-[#FAF9F6]/5 rounded-2xl border border-[#D4AF37]/40 shadow-2xl backdrop-blur-md hover:border-[#D4AF37] hover:scale-105 active:scale-95 transition-all cursor-pointer group"
+            title="Click Logo to Enter Game"
+          >
+            <span className="material-symbols-outlined text-5xl text-[#D4AF37] group-hover:drop-shadow-[0_0_12px_rgba(212,175,55,0.8)] transition-all">
               chess
             </span>
-          </div>
+          </button>
           <div>
-            <h1 className="font-headline text-3xl md:text-4xl font-bold tracking-tight text-[#FAF9F6]">
-              Sanctum Chess
+            <h1 className="font-headline text-3xl md:text-4xl font-bold tracking-tight text-[#FAF9F6] gold-shimmer">
+              VPN Chess
             </h1>
             <p className="font-body text-xs text-[#c4c7c7] uppercase tracking-widest mt-1">
-              Grandmaster Arena & Offline Sanctum
+              Grandmaster Protocols & Online Arena
             </p>
           </div>
         </div>
 
+        {/* Primary Instant Enter Game CTA */}
+        <button
+          type="button"
+          onClick={onPlayAsGuest}
+          className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-[#D4AF37] via-[#f3d368] to-[#D4AF37] hover:brightness-110 text-[#121411] font-headline text-sm font-extrabold uppercase tracking-widest transition-all cursor-pointer shadow-[0_0_25px_rgba(212,175,55,0.3)] active:scale-[0.98] flex items-center justify-center gap-3 border border-[#FAF9F6]/40"
+        >
+          <span className="material-symbols-outlined text-xl font-bold">sports_esports</span>
+          <span>ENTER GAME NOW</span>
+          <span className="material-symbols-outlined text-lg">arrow_forward</span>
+        </button>
+
         {/* Main Authentication Card */}
         <div className="glass-panel p-6 md:p-8 rounded-3xl border border-white/10 shadow-2xl space-y-5">
-          {/* Supabase Status Pill */}
-          <div className="bg-[#1e201d] p-3 rounded-xl border border-white/5 text-[11px] space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-[#c4c7c7] font-body flex items-center gap-2">
-                <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
-                <span>Auth Service: {isConnected ? 'Supabase Connected' : 'Key Required'}</span>
-              </span>
-              <button
-                type="button"
-                onClick={() => setShowKeyConfig(!showKeyConfig)}
-                className="text-[#D4AF37] hover:underline font-bold text-[10px] cursor-pointer flex items-center gap-1"
-              >
-                <span className="material-symbols-outlined text-xs">key</span>
-                <span>{showKeyConfig ? 'Close Key Setup' : 'Supabase Key Setup'}</span>
-              </button>
-            </div>
-
-            {/* Config Keys Panel */}
-            {showKeyConfig && (
-              <form onSubmit={handleSaveKeys} className="pt-2 border-t border-white/10 space-y-2.5 text-left">
-                <p className="text-[10px] text-[#c4c7c7]/80">
-                  Enter your Supabase URL & Anon key to connect live authentication:
-                </p>
-                <div>
-                  <label className="block text-[9px] font-bold text-[#D4AF37] uppercase tracking-wider mb-1">
-                    Supabase Project URL
-                  </label>
-                  <input
-                    type="url"
-                    required
-                    value={customUrl}
-                    onChange={(e) => setCustomUrl(e.target.value)}
-                    placeholder="https://xyzproject.supabase.co"
-                    className="w-full bg-[#121411] border border-white/15 rounded-lg px-3 py-1.5 font-mono text-xs text-[#FAF9F6] focus:outline-none focus:border-[#D4AF37]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[9px] font-bold text-[#D4AF37] uppercase tracking-wider mb-1">
-                    Supabase Anon Key
-                  </label>
-                  <input
-                    type="password"
-                    required
-                    value={customKey}
-                    onChange={(e) => setCustomKey(e.target.value)}
-                    placeholder="eyJhbGciOiJIUzI1NiIsInR..."
-                    className="w-full bg-[#121411] border border-white/15 rounded-lg px-3 py-1.5 font-mono text-xs text-[#FAF9F6] focus:outline-none focus:border-[#D4AF37]"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  className="w-full py-2 bg-[#D4AF37] text-[#121411] hover:bg-[#b5952f] rounded-lg font-body text-xs font-bold uppercase tracking-wider transition-all cursor-pointer shadow active:scale-95 flex items-center justify-center gap-1.5"
-                >
-                  <span className="material-symbols-outlined text-sm">save</span>
-                  <span>{keySaveSuccess ? 'KEYS CONNECTED!' : 'SAVE & INITIALIZE SUPABASE'}</span>
-                </button>
-              </form>
-            )}
-          </div>
-
           {errorMsg && (
             <div className="bg-red-500/10 border border-red-500/30 p-3 rounded-xl text-red-300 text-xs font-body flex items-center gap-2">
               <span className="material-symbols-outlined text-base shrink-0">error</span>
@@ -347,44 +303,14 @@ export const LoginLandingScreen: React.FC<LoginLandingScreenProps> = ({
               disabled={loading}
               className="w-full py-3.5 rounded-xl bg-[#FAF9F6] text-[#121411] font-body text-xs font-bold uppercase tracking-wider hover:bg-white active:scale-95 transition-all shadow cursor-pointer disabled:opacity-60"
             >
-              {loading ? 'AUTHENTICATING...' : activeTab === 'signup' ? 'REGISTER ACCOUNT' : 'ENTER SANCTUM'}
+              {loading ? 'AUTHENTICATING...' : activeTab === 'signup' ? 'REGISTER & ENTER GAME' : 'LOGIN & ENTER GAME'}
             </button>
           </form>
-
-          {/* Enterprise ERP Auth System Option */}
-          <div className="pt-2 text-center border-t border-white/10 space-y-2">
-            <button
-              type="button"
-              onClick={() => setIsErpModalOpen(true)}
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-[#D4AF37] via-[#b8972e] to-[#997c23] hover:brightness-110 text-[#121411] font-body text-xs font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 shadow-lg"
-            >
-              <span className="material-symbols-outlined text-base">account_balance</span>
-              <span>Open Enterprise ERP Auth Algorithm</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={onPlayAsGuest}
-              className="w-full py-2.5 rounded-xl bg-[#FAF9F6]/5 hover:bg-[#FAF9F6]/10 border border-white/10 text-[#FAF9F6] font-body text-xs font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2"
-            >
-              <span className="material-symbols-outlined text-sm text-[#D4AF37]">play_arrow</span>
-              <span>PLAY AS GUEST (OFFLINE / BOT MATCHES)</span>
-            </button>
-          </div>
         </div>
-
-        {/* ERP Auth Modal Component */}
-        <ErpAuthModal
-          isOpen={isErpModalOpen}
-          onClose={() => setIsErpModalOpen(false)}
-          onLoginComplete={(session: ErpUserSession) => {
-            onLoginSuccess(session.studentIdOrEmail, session.name);
-          }}
-        />
 
         {/* Footer Note */}
         <p className="text-center font-body text-[11px] text-[#c4c7c7]/50">
-          Powered by Supabase Auth & Real-Time Engine • All Rights Reserved
+          VPN Chess Secure Engine • All Rights Reserved
         </p>
       </div>
     </div>
