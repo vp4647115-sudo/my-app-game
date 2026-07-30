@@ -247,6 +247,23 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
     }
   }, [playerTime, opponentTime, gameOverResult, handleGameOver]);
 
+  // Quick Chat State for Online Matches
+  const [opponentChatBubble, setOpponentChatBubble] = useState<string | null>(null);
+  const [showQuickChatMenu, setShowQuickChatMenu] = useState<boolean>(false);
+
+  // Send initial human opponent greeting in online mode
+  useEffect(() => {
+    if (config.mode === 'online') {
+      const timer = setTimeout(() => {
+        const greetings = ['Good luck! ♟️', 'GL HF! 🤝', 'Hello! Have a good game!'];
+        const chosen = greetings[Math.floor(Math.random() * greetings.length)];
+        setOpponentChatBubble(chosen);
+        setTimeout(() => setOpponentChatBubble(null), 4000);
+      }, 1400);
+      return () => clearTimeout(timer);
+    }
+  }, [config.mode]);
+
   // AI Bot & Online Opponent Turn Execution
   useEffect(() => {
     if (gameOverResult) return;
@@ -265,28 +282,42 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
         else diff = 'hard';
       }
 
+      // Simulate realistic human move delay for online matches (1.2s - 3.2s)
+      const moveDelay = config.mode === 'online' ? Math.floor(Math.random() * 2000) + 1200 : 300;
+
       getAIMove(game, diff)
         .then((aiSan) => {
           if (!aiSan) return;
 
-          const copy = new Chess(game.fen());
-          const moveRes = copy.move(aiSan);
-          if (moveRes) {
-            setGame(copy);
-            setLastMove({ from: moveRes.from, to: moveRes.to });
-            setMoveHistory(copy.history());
-            setMoveDuration(0);
+          setTimeout(() => {
+            const copy = new Chess(game.fen());
+            const moveRes = copy.move(aiSan);
+            if (moveRes) {
+              setGame(copy);
+              setLastMove({ from: moveRes.from, to: moveRes.to });
+              setMoveHistory(copy.history());
+              setMoveDuration(0);
 
-            if (moveRes.captured) playSnd('capture');
-            else playSnd('move');
+              if (moveRes.captured) playSnd('capture');
+              else playSnd('move');
 
-            checkGameEndConditions(copy);
-          }
+              checkGameEndConditions(copy);
+
+              // Occasional opponent reactions on captures/checks in online mode
+              if (config.mode === 'online' && Math.random() < 0.25) {
+                const reactions = ['Nice tactic!', 'Tricky move...', 'Oooh!', 'Well played!'];
+                const react = reactions[Math.floor(Math.random() * reactions.length)];
+                setTimeout(() => {
+                  setOpponentChatBubble(react);
+                  setTimeout(() => setOpponentChatBubble(null), 3000);
+                }, 800);
+              }
+            }
+            setIsBotThinking(false);
+            botMovingRef.current = false;
+          }, moveDelay);
         })
         .catch(() => {
-          // Silent fallback for AI promise errors
-        })
-        .finally(() => {
           setIsBotThinking(false);
           botMovingRef.current = false;
         });
@@ -576,13 +607,22 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
       </div>
 
       {/* Opponent Card Header */}
-      <div className="w-full glass-panel px-3 py-2 rounded-xl flex items-center justify-between mb-1.5 border border-white/10 shadow-md">
+      <div className="w-full glass-panel px-3 py-2 rounded-xl flex items-center justify-between mb-1.5 border border-white/10 shadow-md relative">
+        {/* Opponent Chat Bubble Popup */}
+        {opponentChatBubble && (
+          <div className="absolute -top-9 left-12 bg-[#FAF9F6] text-[#121411] px-3 py-1 rounded-xl text-xs font-bold shadow-xl border border-[#D4AF37] animate-bounce z-30 flex items-center gap-1">
+            <span className="material-symbols-outlined text-sm text-[#D4AF37]">chat</span>
+            <span>{opponentChatBubble}</span>
+            <div className="absolute -bottom-1.5 left-4 w-2.5 h-2.5 bg-[#FAF9F6] rotate-45 border-r border-b border-[#D4AF37]" />
+          </div>
+        )}
+
         <div className="flex items-center gap-2.5">
           <div className="relative shrink-0">
             <img
               src={
                 config.opponentAvatar ||
-                'https://lh3.googleusercontent.com/aida-public/AB6AXuDStYFdzyUT63P-_K2DGhNguEomRVy1t4uTZuZbnzRRYSP6UH5egIzIdxPtKeIMNUvhp3CRZXdXs0PtiMmboH3AlvpB4gnzBfvznzEvKMZ-u4EaReuXSot3pl8FefLThPUc7BgqJ7NIoPT-KJ_FZzhbslnKjz5svMxipf_dvY9g5FyGqu_o4MQlOGYwAsAjJKOOTz58a2KHF7w35hmK0i-H2nvH8FHqrsx-zcjOJ-7l_MZXt5KBBnMYSdQzyUwGjTUTexKzl5oXBngK'
+                'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
               }
               alt={config.opponentName}
               className="w-8 h-8 rounded-full object-cover border border-[#D4AF37]/40"
@@ -593,6 +633,9 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
           </div>
           <div>
             <div className="flex items-center gap-1.5">
+              {config.opponentCountry && (
+                <span className="text-xs">{config.opponentCountry}</span>
+              )}
               <span className="font-headline text-xs font-bold text-[#FAF9F6]">
                 {config.opponentName}
               </span>
@@ -602,35 +645,95 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
             </div>
             {isBotThinking ? (
               <span className="font-body text-[9px] text-[#D4AF37] animate-pulse">
-                Thinking move...
+                Analyzing board...
               </span>
             ) : (
-              <span className="font-body text-[9px] text-[#c4c7c7]/80 flex items-center gap-1 font-semibold">
-                {config.mode === 'offline'
-                  ? game.turn() === 'b'
-                    ? "Black's Turn"
-                    : "White's Turn"
-                  : isTopClockActive
-                  ? "Opponent's turn"
-                  : 'Waiting...'}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="font-body text-[9px] text-[#c4c7c7]/80 flex items-center gap-1 font-semibold">
+                  {config.mode === 'offline'
+                    ? game.turn() === 'b'
+                      ? "Black's Turn"
+                      : "White's Turn"
+                    : isTopClockActive
+                    ? "Opponent's turn"
+                    : 'Waiting...'}
+                </span>
+                {config.mode === 'online' && (
+                  <span className="text-[8px] text-emerald-400 font-bold bg-emerald-500/10 px-1 rounded flex items-center gap-0.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    ⚡ {config.opponentPing || 22}ms
+                  </span>
+                )}
+              </div>
             )}
           </div>
         </div>
 
-        {/* Opponent Clock */}
-        <div className="flex flex-col items-end gap-0.5 shrink-0">
-          <div
-            className={`px-3 py-1 rounded-lg font-headline text-sm font-bold tracking-wider transition-all flex items-center gap-1.5 ${
-              isTopClockActive
-                ? 'bg-[#FAF9F6] text-[#121411] shadow-md ring-2 ring-[#D4AF37]'
-                : 'bg-[#1a1a1a] text-[#c4c7c7]'
-            }`}
-          >
-            {isTopClockActive && (
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-            )}
-            <span>{formatTime(opponentTime)}</span>
+        {/* Quick Chat Button & Opponent Clock */}
+        <div className="flex items-center gap-2">
+          {config.mode === 'online' && (
+            <div className="relative">
+              <button
+                onClick={() => setShowQuickChatMenu(!showQuickChatMenu)}
+                className="p-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-[#D4AF37] cursor-pointer transition-colors"
+                title="Send Emote / Chat"
+              >
+                <span className="material-symbols-outlined text-sm">chat_bubble</span>
+              </button>
+
+              {/* Quick Chat Menu Popover */}
+              {showQuickChatMenu && (
+                <div className="absolute right-0 top-8 bg-[#17181D] border border-[#D4AF37]/40 rounded-xl p-2 shadow-2xl z-40 w-44 space-y-1">
+                  <div className="text-[9px] font-bold text-[#A8A8A8] uppercase tracking-wider px-1 mb-1">
+                    Quick Chat
+                  </div>
+                  {[
+                    '👋 GL HF!',
+                    '👏 Great Move!',
+                    '😅 Oops!',
+                    '🤝 Well Played!',
+                    '🔥 Good Game!',
+                  ].map((msg) => (
+                    <button
+                      key={msg}
+                      onClick={() => {
+                        setShowQuickChatMenu(false);
+                        // Opponent responds after 1.5s
+                        setTimeout(() => {
+                          const replies = [
+                            'Thanks! You too! 🤝',
+                            'Good luck! ♟️',
+                            'Haha thanks! 😄',
+                            'Gg! 🔥',
+                          ];
+                          setOpponentChatBubble(replies[Math.floor(Math.random() * replies.length)]);
+                          setTimeout(() => setOpponentChatBubble(null), 3000);
+                        }, 1200);
+                      }}
+                      className="w-full text-left px-2 py-1 rounded text-xs text-[#FAF9F6] hover:bg-[#D4AF37]/20 transition-colors cursor-pointer"
+                    >
+                      {msg}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Opponent Clock */}
+          <div className="flex flex-col items-end gap-0.5 shrink-0">
+            <div
+              className={`px-3 py-1 rounded-lg font-headline text-sm font-bold tracking-wider transition-all flex items-center gap-1.5 ${
+                isTopClockActive
+                  ? 'bg-[#FAF9F6] text-[#121411] shadow-md ring-2 ring-[#D4AF37]'
+                  : 'bg-[#1a1a1a] text-[#c4c7c7]'
+              }`}
+            >
+              {isTopClockActive && (
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+              )}
+              <span>{formatTime(opponentTime)}</span>
+            </div>
           </div>
         </div>
       </div>

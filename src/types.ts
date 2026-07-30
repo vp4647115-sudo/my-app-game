@@ -60,6 +60,8 @@ export interface ActiveMatchConfig {
   opponentName: string;
   opponentElo: number;
   opponentAvatar?: string;
+  opponentCountry?: string;
+  opponentPing?: number;
   rated: boolean;
 }
 
