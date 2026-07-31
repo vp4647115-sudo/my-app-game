@@ -51,6 +51,7 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
     settings.pieceStyle || 'neo-grandmaster'
   );
   const [showStyleMenu, setShowStyleMenu] = useState<boolean>(false);
+  const [layoutMode, setLayoutMode] = useState<'portrait' | 'landscape'>('portrait');
 
   // FEN history and Redo stack for robust Undo/Redo
   const [fenHistory, setFenHistory] = useState<string[]>(
@@ -708,7 +709,7 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
   const isCheckState = game.inCheck();
 
   return (
-    <div className="pt-14 pb-16 px-2.5 max-w-[420px] mx-auto flex flex-col items-center justify-center min-h-[calc(100vh-3.5rem)] text-[#e3e3de] relative">
+    <div className={"pt-14 pb-16 px-2.5 mx-auto flex flex-col items-center justify-center min-h-[calc(100vh-3.5rem)] text-[#e3e3de] relative transition-all duration-300 " + (layoutMode === 'landscape' ? 'max-w-[760px]' : 'max-w-[420px]')}>
       {/* Turn Notice Alert Banner */}
       {turnNotice && (
         <div className="fixed top-14 left-1/2 -translate-x-1/2 z-50 bg-[#D4AF37] text-[#121411] px-4 py-1.5 rounded-lg font-body text-xs font-bold shadow-2xl animate-bounce flex items-center gap-1.5">
@@ -735,8 +736,22 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
           <span>Exit</span>
         </button>
 
-        {/* Graphics Customization Toggle */}
-        <div className="relative">
+        {/* Top Header Actions */}
+        <div className="flex items-center gap-2">
+          {/* Portrait / Landscape Toggle */}
+          <button
+            onClick={() => setLayoutMode(layoutMode === 'portrait' ? 'landscape' : 'portrait')}
+            className="px-2.5 py-1 rounded-lg glass-panel hover:bg-white/10 active:scale-95 transition-all text-[#D4AF37] border border-[#D4AF37]/30 flex items-center gap-1 text-[11px] font-body font-bold cursor-pointer"
+            title="Switch Portrait / Landscape Layout"
+          >
+            <span className="material-symbols-outlined text-xs">
+              {layoutMode === 'portrait' ? 'stay_current_landscape' : 'stay_current_portrait'}
+            </span>
+            <span className="capitalize">{layoutMode}</span>
+          </button>
+
+          {/* Graphics Customization Toggle */}
+          <div className="relative">
           <button
             onClick={() => setShowStyleMenu(!showStyleMenu)}
             className="px-2.5 py-1 rounded-lg glass-panel hover:bg-white/10 active:scale-95 transition-all text-[#D4AF37] border border-[#D4AF37]/30 flex items-center gap-1 text-[11px] font-body font-bold cursor-pointer"
@@ -820,9 +835,10 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
           )}
         </div>
       </div>
+    </div>
 
-      {/* Opponent Card Header */}
-      <div className="w-full glass-panel px-3 py-2 rounded-xl flex items-center justify-between mb-1.5 border border-white/10 shadow-md relative">
+      {/* Opponent Card Header (Premium Styling) */}
+      <div className="w-full glass-panel px-3.5 py-2.5 rounded-xl flex items-center justify-between mb-2 border border-[#D4AF37]/50 shadow-[0_4px_20px_rgba(0,0,0,0.5)] bg-gradient-to-r from-[#1E1712] to-[#120D0A] relative">
         {/* Opponent Chat Bubble Popup */}
         {opponentChatBubble && (
           <div className="absolute -top-9 left-12 bg-[#FAF9F6] text-[#121411] px-3 py-1 rounded-xl text-xs font-bold shadow-xl border border-[#D4AF37] animate-bounce z-30 flex items-center gap-1">
@@ -956,12 +972,19 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
         </div>
       </div>
 
-      {/* Engine Position Evaluation Meter */}
-      <div className="w-full h-1 bg-[#333532] rounded-full my-1 overflow-hidden border border-white/5 relative">
-        <div
-          className="h-full bg-[#FAF9F6] transition-all duration-300"
-          style={{ width: `${evalPercent}%` }}
-        />
+      {/* Prominent Engine Position Evaluation Meter */}
+      <div className="w-full bg-[#181A16] px-3 py-2 rounded-xl border border-[#D4AF37]/40 shadow-lg my-1.5 flex items-center justify-between font-headline">
+        <div className="flex items-center gap-1.5 text-[#D4AF37] font-bold text-xs tracking-wider">
+          <span className="material-symbols-outlined text-sm">analytics</span>
+          <span>EVAL: {evalScore > 0 ? `+${(evalScore/100).toFixed(1)}` : (evalScore/100).toFixed(1)}</span>
+        </div>
+        <div className="flex-1 mx-3 h-3.5 bg-[#2A2B26] rounded-full overflow-hidden border border-white/10 relative shadow-inner">
+          <div
+            className="h-full bg-gradient-to-r from-[#FAF9F6] via-[#D4AF37] to-[#C59B27] transition-all duration-300 rounded-full"
+            style={{ width: `${evalPercent}%` }}
+          />
+        </div>
+        <span className="text-[11px] font-bold text-[#FAF9F6]">{evalPercent.toFixed(0)}% White</span>
       </div>
 
       {/* Redesigned Graphic Chessboard Container */}
@@ -1067,8 +1090,8 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
         )}
       </div>
 
-      {/* Player Card Header */}
-      <div className="w-full glass-panel px-3 py-2 rounded-xl flex items-center justify-between mt-1.5 border border-white/10 shadow-md">
+      {/* Player Card Header (Premium Styling) */}
+      <div className="w-full glass-panel px-3.5 py-2.5 rounded-xl flex items-center justify-between mt-2 border border-[#D4AF37]/50 shadow-[0_4px_20px_rgba(0,0,0,0.5)] bg-gradient-to-r from-[#1E1712] to-[#120D0A]">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-full overflow-hidden border border-[#D4AF37]/50 shrink-0 bg-[#1e201d] flex items-center justify-center">
             {user.avatarUrl && !user.avatarUrl.includes('googleusercontent.com') && !user.avatarUrl.includes('unsplash.com') ? (
@@ -1119,15 +1142,15 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
         </div>
       </div>
 
-      {/* Bottom Tournament Control Buttons Row */}
-      <div className="w-full flex items-center justify-between gap-1 sm:gap-1.5 mt-2.5">
+      {/* Bottom Tournament Control Buttons Row (Move Button Removed) */}
+      <div className="w-full flex items-center justify-between gap-1.5 sm:gap-2 mt-2.5">
         <button
           onClick={handleUndo}
           disabled={fenHistory.length <= 1 || isBotThinking}
           title="Undo Move"
-          className="flex-1 py-2 rounded-lg bg-[#221D18] hover:bg-[#2E2822] text-[#E0D5C1] border border-white/10 text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-40 cursor-pointer active:scale-95 shadow flex items-center justify-center gap-1"
+          className="flex-1 py-2.5 rounded-xl bg-[#221D18] hover:bg-[#2E2822] text-[#E0D5C1] border border-white/15 text-[11px] sm:text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-40 cursor-pointer active:scale-95 shadow flex items-center justify-center gap-1"
         >
-          <span className="material-symbols-outlined text-xs sm:text-sm">undo</span>
+          <span className="material-symbols-outlined text-sm">undo</span>
           <span>UNDO</span>
         </button>
 
@@ -1135,34 +1158,27 @@ export const ChessBoardGame: React.FC<ChessBoardGameProps> = ({
           onClick={handleRedo}
           disabled={redoStack.length === 0 || isBotThinking}
           title="Redo Move"
-          className="flex-1 py-2 rounded-lg bg-[#221D18] hover:bg-[#2E2822] text-[#E0D5C1] border border-white/10 text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-40 cursor-pointer active:scale-95 shadow flex items-center justify-center gap-1"
+          className="flex-1 py-2.5 rounded-xl bg-[#221D18] hover:bg-[#2E2822] text-[#E0D5C1] border border-white/15 text-[11px] sm:text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-40 cursor-pointer active:scale-95 shadow flex items-center justify-center gap-1"
         >
-          <span className="material-symbols-outlined text-xs sm:text-sm">redo</span>
+          <span className="material-symbols-outlined text-sm">redo</span>
           <span>REDO</span>
-        </button>
-
-        <button
-          onClick={handleAutoMove}
-          disabled={isBotThinking}
-          title="Auto Move / Hint"
-          className="flex-1 py-2 rounded-lg bg-[#221D18] hover:bg-[#2E2822] text-[#E0D5C1] border border-white/10 text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-40 cursor-pointer active:scale-95 shadow flex items-center justify-center gap-1"
-        >
-          <span>MOVE</span>
         </button>
 
         <button
           onClick={handleNewGame}
           title="New Game"
-          className="flex-1 py-2 rounded-lg bg-[#2A231C] hover:bg-[#382E25] text-[#E6C265] border border-[#C29B38] text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all cursor-pointer active:scale-95 shadow flex items-center justify-center gap-1 font-headline"
+          className="flex-1 py-2.5 rounded-xl bg-[#2A231C] hover:bg-[#382E25] text-[#E6C265] border border-[#C29B38] text-[11px] sm:text-xs font-bold uppercase tracking-wider transition-all cursor-pointer active:scale-95 shadow flex items-center justify-center gap-1 font-headline"
         >
+          <span className="material-symbols-outlined text-sm">refresh</span>
           <span>NEW</span>
         </button>
 
         <button
           onClick={() => setShowStyleMenu(!showStyleMenu)}
           title="Board Style"
-          className="flex-1 py-2 rounded-lg bg-[#221D18] hover:bg-[#2E2822] text-[#E0D5C1] border border-white/10 text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all cursor-pointer active:scale-95 shadow flex items-center justify-center gap-1"
+          className="flex-1 py-2.5 rounded-xl bg-[#221D18] hover:bg-[#2E2822] text-[#E0D5C1] border border-white/15 text-[11px] sm:text-xs font-bold uppercase tracking-wider transition-all cursor-pointer active:scale-95 shadow flex items-center justify-center gap-1"
         >
+          <span className="material-symbols-outlined text-sm">palette</span>
           <span>STYLE</span>
         </button>
       </div>

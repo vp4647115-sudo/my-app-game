@@ -25,18 +25,20 @@ import {
 import firebaseConfigRaw from '../../firebase-applet-config.json';
 import { UserProfile, MatchHistoryItem } from '../types';
 
-// Support environment variables with fallback to config json
+const rawConfig = (firebaseConfigRaw || {}) as Record<string, string>;
+
+// Environment variables are the primary configuration source with fallback to config json
 const resolvedFirebaseConfig = {
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || firebaseConfigRaw.projectId,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || firebaseConfigRaw.appId,
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || firebaseConfigRaw.apiKey,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || firebaseConfigRaw.authDomain,
-  firestoreDatabaseId: import.meta.env.VITE_FIREBASE_FIRESTORE_DATABASE_ID || firebaseConfigRaw.firestoreDatabaseId,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || firebaseConfigRaw.storageBucket,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || firebaseConfigRaw.messagingSenderId,
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || (firebaseConfigRaw as Record<string, string>).measurementId || '',
-  oAuthClientId: import.meta.env.VITE_FIREBASE_OAUTH_CLIENT_ID || (firebaseConfigRaw as Record<string, string>).oAuthClientId || '',
-  recaptchaSiteKey: import.meta.env.VITE_FIREBASE_RECAPTCHA_SITE_KEY || (firebaseConfigRaw as Record<string, string>).recaptchaSiteKey || '',
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || rawConfig.projectId || '',
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || rawConfig.appId || '',
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || rawConfig.apiKey || '',
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || rawConfig.authDomain || '',
+  firestoreDatabaseId: import.meta.env.VITE_FIREBASE_FIRESTORE_DATABASE_ID || rawConfig.firestoreDatabaseId || '(default)',
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || rawConfig.storageBucket || '',
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || rawConfig.messagingSenderId || '',
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || rawConfig.measurementId || '',
+  oAuthClientId: import.meta.env.VITE_FIREBASE_OAUTH_CLIENT_ID || rawConfig.oAuthClientId || '',
+  recaptchaSiteKey: import.meta.env.VITE_FIREBASE_RECAPTCHA_SITE_KEY || rawConfig.recaptchaSiteKey || '',
 };
 
 // Initialize Firebase App & Firestore with databaseId

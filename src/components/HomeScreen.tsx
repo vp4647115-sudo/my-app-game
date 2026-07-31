@@ -223,68 +223,66 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ user, onNavigate, onStar
         </motion.div>
       )}
 
-      {/* Main Action Grid */}
-      <div className="w-full space-y-2.5">
-        {/* Play AI Engine */}
+      {/* Main Action Grid - Side-by-side chess theme cards */}
+      <div className="w-full grid grid-cols-2 gap-3">
+        {/* Play Online */}
         <motion.button
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.1 }}
-          onClick={() => onNavigate('bot')}
-          className="w-full group relative p-3.5 rounded-xl bg-[#141622]/95 backdrop-blur-md border border-[#D4AF37]/60 shadow-[0_8px_25px_rgba(0,0,0,0.7)] hover:border-[#D4AF37] hover:bg-[#1a1d2e] hover:shadow-[0_0_20px_rgba(212,175,55,0.25)] active:scale-[0.98] transition-all text-left cursor-pointer flex items-center justify-between overflow-hidden"
+          onClick={() => onNavigate('arena')}
+          className="group relative p-3 rounded-2xl bg-gradient-to-br from-[#2E2018] via-[#221711] to-[#18110D] shadow-[0_10px_25px_rgba(0,0,0,0.8)] hover:shadow-[0_0_25px_rgba(212,175,55,0.35)] hover:-translate-y-0.5 active:scale-[0.97] transition-all text-left cursor-pointer flex flex-col justify-between overflow-hidden"
         >
-          <div className="flex items-center gap-3 relative z-10">
-            <div className="w-10 h-10 rounded-lg bg-[#D4AF37]/25 border border-[#D4AF37] flex items-center justify-center text-[#D4AF37] shrink-0 shadow-[0_0_12px_rgba(212,175,55,0.3)]">
-              <span className="material-symbols-outlined text-xl">smart_toy</span>
+          <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-[#D4AF37]/15 to-transparent rounded-bl-full pointer-events-none" />
+          <div className="flex items-center justify-between mb-2 relative z-10">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#D4AF37] to-[#B8860B] flex items-center justify-center text-[#120D0A] shadow-[0_0_12px_rgba(212,175,55,0.4)]">
+              <span className="material-symbols-outlined text-lg font-bold">public</span>
             </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <span className="font-headline text-sm font-bold text-[#FFFFFF] tracking-wide">
-                  Play vs AI Engine
-                </span>
-                <span className="px-1.5 py-0.5 rounded-full text-[8px] font-extrabold uppercase bg-[#D4AF37] text-[#0B0B0F] shadow-sm">
-                  Stockfish
-                </span>
-              </div>
-              <span className="block font-body text-[11px] text-[#C0C0C0] font-medium">
-                Custom ELO Bots (800 - 2600) & Real-Time Eval
-              </span>
+            <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider bg-[#D4AF37]/20 text-[#D4AF37] border border-[#D4AF37]/40">
+              Live
+            </span>
+          </div>
+          <div className="relative z-10">
+            <div className="font-headline text-sm font-extrabold text-[#FFF8EE] tracking-wide mb-0.5">
+              Play Online
+            </div>
+            <div className="font-body text-[10px] text-[#D0C0B0] leading-tight">
+              Instant matchmaking & rated arenas
             </div>
           </div>
-          <span className="material-symbols-outlined text-[#D4AF37] text-xl shrink-0 group-hover:translate-x-1 transition-transform">
-            arrow_forward
-          </span>
+          <div className="absolute bottom-2 right-2 text-[#D4AF37]/40 group-hover:text-[#D4AF37] group-hover:translate-x-0.5 transition-all">
+            <span className="material-symbols-outlined text-base">arrow_forward</span>
+          </div>
         </motion.button>
 
-        {/* Online Arena Multiplayer */}
+        {/* Play vs AI */}
         <motion.button
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.15 }}
-          onClick={() => onNavigate('arena')}
-          className="w-full group relative p-3.5 rounded-xl bg-[#141622]/95 backdrop-blur-md border border-[#4DA8FF]/60 shadow-[0_8px_25px_rgba(0,0,0,0.7)] hover:border-[#4DA8FF] hover:bg-[#1a1d2e] hover:shadow-[0_0_20px_rgba(77,168,255,0.25)] active:scale-[0.98] transition-all text-left cursor-pointer flex items-center justify-between overflow-hidden"
+          onClick={() => onNavigate('bot')}
+          className="group relative p-3 rounded-2xl bg-gradient-to-br from-[#2E2018] via-[#221711] to-[#18110D] shadow-[0_10px_25px_rgba(0,0,0,0.8)] hover:shadow-[0_0_25px_rgba(212,175,55,0.35)] hover:-translate-y-0.5 active:scale-[0.97] transition-all text-left cursor-pointer flex flex-col justify-between overflow-hidden"
         >
-          <div className="flex items-center gap-3 relative z-10">
-            <div className="w-10 h-10 rounded-lg bg-[#4DA8FF]/25 border border-[#4DA8FF] flex items-center justify-center text-[#4DA8FF] shrink-0 shadow-[0_0_12px_rgba(77,168,255,0.3)]">
-              <span className="material-symbols-outlined text-xl">public</span>
+          <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-[#D4AF37]/15 to-transparent rounded-bl-full pointer-events-none" />
+          <div className="flex items-center justify-between mb-2 relative z-10">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#D4AF37] to-[#B8860B] flex items-center justify-center text-[#120D0A] shadow-[0_0_12px_rgba(212,175,55,0.4)]">
+              <span className="material-symbols-outlined text-lg font-bold">smart_toy</span>
             </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <span className="font-headline text-sm font-bold text-[#FFFFFF] tracking-wide">
-                  Online Arena
-                </span>
-                <span className="px-1.5 py-0.5 rounded-full text-[8px] font-extrabold uppercase bg-[#4DA8FF] text-[#0B0B0F] shadow-sm">
-                  Multiplayer
-                </span>
-              </div>
-              <span className="block font-body text-[11px] text-[#C0C0C0] font-medium">
-                Instant Matchmaking & Rated Tournaments
-              </span>
+            <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider bg-[#D4AF37]/20 text-[#D4AF37] border border-[#D4AF37]/40">
+              Stockfish
+            </span>
+          </div>
+          <div className="relative z-10">
+            <div className="font-headline text-sm font-extrabold text-[#FFF8EE] tracking-wide mb-0.5">
+              Play vs AI
+            </div>
+            <div className="font-body text-[10px] text-[#D0C0B0] leading-tight">
+              Adaptive bots from 800 to 2600 ELO
             </div>
           </div>
-          <span className="material-symbols-outlined text-[#4DA8FF] text-xl shrink-0 group-hover:translate-x-1 transition-transform">
-            arrow_forward
-          </span>
+          <div className="absolute bottom-2 right-2 text-[#D4AF37]/40 group-hover:text-[#D4AF37] group-hover:translate-x-0.5 transition-all">
+            <span className="material-symbols-outlined text-base">arrow_forward</span>
+          </div>
         </motion.button>
 
         {/* Play with Friend */}
@@ -293,86 +291,90 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ user, onNavigate, onStar
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.2 }}
           onClick={() => onNavigate('friend')}
-          className="w-full group relative p-3.5 rounded-xl bg-[#141622]/95 backdrop-blur-md border border-purple-500/60 shadow-[0_8px_25px_rgba(0,0,0,0.7)] hover:border-purple-400 hover:bg-[#1a1d2e] hover:shadow-[0_0_20px_rgba(168,85,247,0.25)] active:scale-[0.98] transition-all text-left cursor-pointer flex items-center justify-between overflow-hidden"
+          className="group relative p-3 rounded-2xl bg-gradient-to-br from-[#2E2018] via-[#221711] to-[#18110D] shadow-[0_10px_25px_rgba(0,0,0,0.8)] hover:shadow-[0_0_25px_rgba(212,175,55,0.35)] hover:-translate-y-0.5 active:scale-[0.97] transition-all text-left cursor-pointer flex flex-col justify-between overflow-hidden"
         >
-          <div className="flex items-center gap-3 relative z-10">
-            <div className="w-10 h-10 rounded-lg bg-purple-500/25 border border-purple-400 flex items-center justify-center text-purple-300 shrink-0 shadow-[0_0_12px_rgba(168,85,247,0.3)]">
-              <span className="material-symbols-outlined text-xl">group</span>
+          <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-[#D4AF37]/15 to-transparent rounded-bl-full pointer-events-none" />
+          <div className="flex items-center justify-between mb-2 relative z-10">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#D4AF37] to-[#B8860B] flex items-center justify-center text-[#120D0A] shadow-[0_0_12px_rgba(212,175,55,0.4)]">
+              <span className="material-symbols-outlined text-lg font-bold">group</span>
             </div>
-            <div>
-              <span className="block font-headline text-sm font-bold text-[#FFFFFF] tracking-wide">
-                Play with Friend
-              </span>
-              <span className="block font-body text-[11px] text-[#C0C0C0] font-medium">
-                Generate Room Code & Challenge
-              </span>
+            <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider bg-[#D4AF37]/20 text-[#D4AF37] border border-[#D4AF37]/40">
+              Private
+            </span>
+          </div>
+          <div className="relative z-10">
+            <div className="font-headline text-sm font-extrabold text-[#FFF8EE] tracking-wide mb-0.5">
+              Play Friend
+            </div>
+            <div className="font-body text-[10px] text-[#D0C0B0] leading-tight">
+              Create room code & challenge buddy
             </div>
           </div>
-          <span className="material-symbols-outlined text-purple-400 text-xl shrink-0 group-hover:translate-x-1 transition-transform">
-            arrow_forward
-          </span>
+          <div className="absolute bottom-2 right-2 text-[#D4AF37]/40 group-hover:text-[#D4AF37] group-hover:translate-x-0.5 transition-all">
+            <span className="material-symbols-outlined text-base">arrow_forward</span>
+          </div>
         </motion.button>
 
-        {/* Master Academy & Tactics */}
+        {/* Master Academy */}
         <motion.button
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.25 }}
           onClick={() => onNavigate('learn')}
-          className="w-full group relative p-3.5 rounded-xl bg-[#141622]/95 backdrop-blur-md border border-[#3DDC84]/60 shadow-[0_8px_25px_rgba(0,0,0,0.7)] hover:border-[#3DDC84] hover:bg-[#1a1d2e] hover:shadow-[0_0_20px_rgba(61,220,132,0.25)] active:scale-[0.98] transition-all text-left cursor-pointer flex items-center justify-between overflow-hidden"
+          className="group relative p-3 rounded-2xl bg-gradient-to-br from-[#2E2018] via-[#221711] to-[#18110D] shadow-[0_10px_25px_rgba(0,0,0,0.8)] hover:shadow-[0_0_25px_rgba(212,175,55,0.35)] hover:-translate-y-0.5 active:scale-[0.97] transition-all text-left cursor-pointer flex flex-col justify-between overflow-hidden"
         >
-          <div className="flex items-center gap-3 relative z-10">
-            <div className="w-10 h-10 rounded-lg bg-[#3DDC84]/25 border border-[#3DDC84] flex items-center justify-center text-[#3DDC84] shrink-0 shadow-[0_0_12px_rgba(61,220,132,0.3)]">
-              <span className="material-symbols-outlined text-xl">psychology</span>
+          <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-[#D4AF37]/15 to-transparent rounded-bl-full pointer-events-none" />
+          <div className="flex items-center justify-between mb-2 relative z-10">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#D4AF37] to-[#B8860B] flex items-center justify-center text-[#120D0A] shadow-[0_0_12px_rgba(212,175,55,0.4)]">
+              <span className="material-symbols-outlined text-lg font-bold">psychology</span>
             </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <span className="font-headline text-sm font-bold text-[#FFFFFF] tracking-wide">
-                  Master Academy
-                </span>
-                <span className="px-1.5 py-0.5 rounded-full text-[8px] font-extrabold uppercase bg-[#3DDC84] text-[#0B0B0F] shadow-sm">
-                  Puzzles & AI
-                </span>
-              </div>
-              <span className="block font-body text-[11px] text-[#C0C0C0] font-medium">
-                Daily Tactical Puzzles & Opening Books
-              </span>
+            <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider bg-[#D4AF37]/20 text-[#D4AF37] border border-[#D4AF37]/40">
+              Training
+            </span>
+          </div>
+          <div className="relative z-10">
+            <div className="font-headline text-sm font-extrabold text-[#FFF8EE] tracking-wide mb-0.5">
+              Master Academy
+            </div>
+            <div className="font-body text-[10px] text-[#D0C0B0] leading-tight">
+              Daily tactical puzzles & openings
             </div>
           </div>
-          <span className="material-symbols-outlined text-[#3DDC84] text-xl shrink-0 group-hover:translate-x-1 transition-transform">
-            arrow_forward
-          </span>
+          <div className="absolute bottom-2 right-2 text-[#D4AF37]/40 group-hover:text-[#D4AF37] group-hover:translate-x-0.5 transition-all">
+            <span className="material-symbols-outlined text-base">arrow_forward</span>
+          </div>
         </motion.button>
 
-        {/* Offline Pass & Play */}
+        {/* Pass & Play */}
         <motion.button
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.3 }}
           onClick={onStartOffline}
-          className="w-full group relative p-3.5 rounded-xl bg-[#141622]/95 backdrop-blur-md border border-amber-500/60 shadow-[0_8px_25px_rgba(0,0,0,0.7)] hover:border-amber-400 hover:bg-[#1a1d2e] hover:shadow-[0_0_20px_rgba(245,158,11,0.25)] active:scale-[0.98] transition-all text-left cursor-pointer flex items-center justify-between overflow-hidden"
+          className="col-span-2 group relative p-3 rounded-2xl bg-gradient-to-br from-[#2E2018] via-[#221711] to-[#18110D] shadow-[0_10px_25px_rgba(0,0,0,0.8)] hover:shadow-[0_0_25px_rgba(212,175,55,0.35)] hover:-translate-y-0.5 active:scale-[0.97] transition-all text-left cursor-pointer flex items-center justify-between overflow-hidden"
         >
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-[#D4AF37]/15 to-transparent rounded-bl-full pointer-events-none" />
           <div className="flex items-center gap-3 relative z-10">
-            <div className="w-10 h-10 rounded-lg bg-amber-500/25 border border-amber-400 flex items-center justify-center text-amber-300 shrink-0 shadow-[0_0_12px_rgba(245,158,11,0.3)]">
-              <span className="material-symbols-outlined text-xl">phonelink_setup</span>
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#D4AF37] to-[#B8860B] flex items-center justify-center text-[#120D0A] shadow-[0_0_12px_rgba(212,175,55,0.4)]">
+              <span className="material-symbols-outlined text-xl font-bold">phonelink_setup</span>
             </div>
             <div>
-              <div className="flex items-center gap-1.5">
-                <span className="font-headline text-sm font-bold text-[#FFFFFF] tracking-wide">
-                  Offline Pass & Play
+              <div className="flex items-center gap-2">
+                <span className="font-headline text-sm font-extrabold text-[#FFF8EE] tracking-wide">
+                  Pass & Play (Local 2P)
                 </span>
-                <span className="px-1.5 py-0.5 rounded-full text-[8px] font-extrabold uppercase bg-amber-500 text-[#0B0B0F] shadow-sm">
-                  Local 2P
+                <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider bg-[#D4AF37]/20 text-[#D4AF37] border border-[#D4AF37]/40">
+                  Offline
                 </span>
               </div>
-              <span className="block font-body text-[11px] text-[#C0C0C0] font-medium">
-                Play locally on a single device offline
+              <span className="block font-body text-[10px] text-[#D0C0B0] leading-tight">
+                Play locally face-to-face on the same device
               </span>
             </div>
           </div>
-          <span className="material-symbols-outlined text-amber-400 text-xl shrink-0 group-hover:translate-x-1 transition-transform">
-            arrow_forward
-          </span>
+          <div className="text-[#D4AF37]/40 group-hover:text-[#D4AF37] group-hover:translate-x-0.5 transition-all pr-1">
+            <span className="material-symbols-outlined text-xl">arrow_forward</span>
+          </div>
         </motion.button>
       </div>
     </div>
