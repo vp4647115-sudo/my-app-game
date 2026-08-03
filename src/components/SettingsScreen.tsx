@@ -144,48 +144,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           </div>
         </section>
 
-        {/* Security Settings Card */}
-        <section className="glass-panel rounded-xl p-6 flex flex-col space-y-6 border border-white/10 shadow-lg">
-          <div className="flex items-center gap-3">
-            <span className="material-symbols-outlined text-[#D4AF37]">verified_user</span>
-            <h3 className="font-headline text-lg font-bold text-[#FAF9F6]">Security</h3>
-          </div>
-
-          <div className="space-y-4">
-            <div className="flex items-center gap-4 p-4 bg-white/5 rounded-lg border border-white/5">
-              <span className="material-symbols-outlined text-[#c4c7c7]">token</span>
-              <div className="flex flex-col">
-                <span className="font-body text-[10px] font-bold text-[#D4AF37] tracking-wider uppercase">
-                  AUTHENTICATION
-                </span>
-                <span className="font-body text-sm font-semibold text-[#FAF9F6]">
-                  JWT Session Active
-                </span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4 p-4 bg-white/5 rounded-lg border border-white/5">
-              <span className="material-symbols-outlined text-[#D4AF37]">database</span>
-              <div className="flex flex-col">
-                <span className="font-body text-[10px] font-bold text-[#c4c7c7] tracking-wider uppercase">
-                  DATABASE & AUTH BACKENDS
-                </span>
-                <span className="font-body text-sm font-semibold text-[#FAF9F6]">
-                  Firebase Firestore Cloud Active
-                </span>
-                <span className="font-body text-[11px] text-emerald-400">
-                  {isSupabaseConfigured() ? 'Firebase + Supabase DB' : 'Firebase Cloud Sync Enabled'}
-                </span>
-              </div>
-              <span
-                className="material-symbols-outlined text-green-400 ml-auto"
-                style={{ fontVariationSettings: "'FILL' 1" }}
-              >
-                check_circle
-              </span>
-            </div>
-          </div>
-        </section>
 
         {/* Board & Piece Customization Card */}
         <section className="glass-panel rounded-xl p-6 flex flex-col space-y-6 border border-white/10 shadow-lg md:col-span-2">

@@ -101,49 +101,49 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ user, onNavigate, onStar
         </p>
       </motion.div>
 
-      {/* Player Stats Quick Banner */}
+      {/* Player Stats Quick Banner with Distinct Premium Colors */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.05 }}
-        className="w-full glass-panel rounded-xl p-2 mb-3.5 border border-[#D4AF37]/30 shadow-lg grid grid-cols-2 sm:grid-cols-4 gap-2 text-center"
+        className="w-full glass-panel rounded-2xl p-2.5 mb-4 border border-[#D4AF37]/30 shadow-2xl grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-center"
       >
-        <div className="p-2 rounded-lg bg-white/5 border border-white/5 flex flex-col items-center justify-center min-w-0 overflow-hidden">
-          <span className="text-[9px] text-[#A8A8A8] font-bold uppercase tracking-wider mb-0.5 truncate max-w-full">
+        <div className="p-2.5 rounded-xl bg-gradient-to-br from-[#291F0C] to-[#140F05] border border-[#FFB703]/30 shadow-md flex flex-col items-center justify-center min-w-0 overflow-hidden">
+          <span className="text-[9px] text-[#D4B26F] font-bold uppercase tracking-wider mb-0.5 truncate max-w-full">
             Global Rating
           </span>
-          <span className="font-headline text-xs sm:text-sm font-bold text-[#D4AF37] flex items-center justify-center gap-1 w-full truncate max-w-full px-0.5">
-            <span className="material-symbols-outlined text-sm shrink-0">military_tech</span>
+          <span className="font-headline text-xs sm:text-sm font-bold text-[#FFC300] flex items-center justify-center gap-1 w-full truncate max-w-full px-0.5">
+            <span className="material-symbols-outlined text-sm shrink-0 text-[#FFB703]">military_tech</span>
             <span className="truncate">{safeElo}</span>
           </span>
         </div>
 
-        <div className="p-2 rounded-lg bg-white/5 border border-white/5 flex flex-col items-center justify-center min-w-0 overflow-hidden">
-          <span className="text-[9px] text-[#A8A8A8] font-bold uppercase tracking-wider mb-0.5 truncate max-w-full">
+        <div className="p-2.5 rounded-xl bg-gradient-to-br from-[#0D2617] to-[#06140B] border border-[#00E676]/30 shadow-md flex flex-col items-center justify-center min-w-0 overflow-hidden">
+          <span className="text-[9px] text-[#A2E8BC] font-bold uppercase tracking-wider mb-0.5 truncate max-w-full">
             Win Rate
           </span>
-          <span className="font-headline text-xs sm:text-sm font-bold text-[#3DDC84] flex items-center justify-center gap-1 w-full truncate max-w-full px-0.5">
-            <span className="material-symbols-outlined text-sm shrink-0">trending_up</span>
+          <span className="font-headline text-xs sm:text-sm font-bold text-[#00E676] flex items-center justify-center gap-1 w-full truncate max-w-full px-0.5">
+            <span className="material-symbols-outlined text-sm shrink-0 text-[#69F0AE]">trending_up</span>
             <span className="truncate">{winRatePercentage}</span>
           </span>
         </div>
 
-        <div className="p-2 rounded-lg bg-white/5 border border-white/5 flex flex-col items-center justify-center min-w-0 overflow-hidden">
-          <span className="text-[9px] text-[#A8A8A8] font-bold uppercase tracking-wider mb-0.5 truncate max-w-full">
+        <div className="p-2.5 rounded-xl bg-gradient-to-br from-[#0E2038] to-[#07111F] border border-[#29B6F6]/30 shadow-md flex flex-col items-center justify-center min-w-0 overflow-hidden">
+          <span className="text-[9px] text-[#93D1F5] font-bold uppercase tracking-wider mb-0.5 truncate max-w-full">
             Current Rank
           </span>
-          <span className="font-headline text-xs sm:text-sm font-bold text-[#4DA8FF] flex items-center justify-center gap-1 w-full truncate max-w-full px-0.5">
-            <span className="material-symbols-outlined text-sm shrink-0">emoji_events</span>
+          <span className="font-headline text-xs sm:text-sm font-bold text-[#29B6F6] flex items-center justify-center gap-1 w-full truncate max-w-full px-0.5">
+            <span className="material-symbols-outlined text-sm shrink-0 text-[#81D4FA]">emoji_events</span>
             <span className="truncate">{currentRankLabel}</span>
           </span>
         </div>
 
-        <div className="p-2 rounded-lg bg-white/5 border border-white/5 flex flex-col items-center justify-center min-w-0 overflow-hidden">
-          <span className="text-[9px] text-[#A8A8A8] font-bold uppercase tracking-wider mb-0.5 truncate max-w-full">
+        <div className="p-2.5 rounded-xl bg-gradient-to-br from-[#201035] to-[#0E071A] border border-[#AB47BC]/30 shadow-md flex flex-col items-center justify-center min-w-0 overflow-hidden">
+          <span className="text-[9px] text-[#DCA2E8] font-bold uppercase tracking-wider mb-0.5 truncate max-w-full">
             Matches
           </span>
-          <span className="font-headline text-xs sm:text-sm font-bold text-[#FFFFFF] flex items-center justify-center gap-1 w-full truncate max-w-full px-0.5">
-            <span className="material-symbols-outlined text-sm shrink-0">query_stats</span>
+          <span className="font-headline text-xs sm:text-sm font-bold text-[#E1BEE7] flex items-center justify-center gap-1 w-full truncate max-w-full px-0.5">
+            <span className="material-symbols-outlined text-sm shrink-0 text-[#CE93D8]">query_stats</span>
             <span className="truncate">{safeGamesPlayed}</span>
           </span>
         </div>
@@ -223,35 +223,49 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ user, onNavigate, onStar
         </motion.div>
       )}
 
-      {/* Main Action Grid - Side-by-side chess theme cards */}
-      <div className="w-full grid grid-cols-2 gap-3">
+      {/* Main Action Grid - Luxury Glassmorphic Chess Cards with Rich Background Imagery */}
+      <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-3.5">
         {/* Play Online */}
         <motion.button
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.1 }}
           onClick={() => onNavigate('arena')}
-          className="group relative p-3 rounded-2xl bg-gradient-to-br from-[#2E2018] via-[#221711] to-[#18110D] shadow-[0_10px_25px_rgba(0,0,0,0.8)] hover:shadow-[0_0_25px_rgba(212,175,55,0.35)] hover:-translate-y-0.5 active:scale-[0.97] transition-all text-left cursor-pointer flex flex-col justify-between overflow-hidden"
+          className="group relative h-36 rounded-2xl overflow-hidden shadow-[0_12px_30px_rgba(0,0,0,0.85)] hover:shadow-[0_0_30px_rgba(255,183,3,0.45)] hover:-translate-y-1 active:scale-[0.98] transition-all text-left cursor-pointer border border-[#FFB703]/50 flex flex-col justify-between p-4"
         >
-          <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-[#D4AF37]/15 to-transparent rounded-bl-full pointer-events-none" />
-          <div className="flex items-center justify-between mb-2 relative z-10">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#D4AF37] to-[#B8860B] flex items-center justify-center text-[#120D0A] shadow-[0_0_12px_rgba(212,175,55,0.4)]">
-              <span className="material-symbols-outlined text-lg font-bold">public</span>
+          {/* Background Image with Ambient Overlay */}
+          <div 
+            className="absolute inset-0 bg-cover bg-center filter brightness-[0.45] contrast-125 group-hover:scale-110 transition-transform duration-700 ease-out"
+            style={{ backgroundImage: `url('https://images.unsplash.com/photo-1528819622765-d6bcf132f793?auto=format&fit=crop&q=80&w=800')` }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#140D05] via-[#1F1408]/75 to-transparent pointer-events-none" />
+          <div className="absolute top-0 right-0 w-32 h-32 bg-radial from-[#FFB703]/25 to-transparent blur-xl pointer-events-none" />
+
+          {/* Card Top Row */}
+          <div className="relative z-10 flex items-center justify-between">
+            <div className="w-10 h-10 rounded-xl bg-[#2C1F0D]/90 border border-[#FFB703]/60 flex items-center justify-center shadow-[0_0_12px_rgba(255,183,3,0.4)] backdrop-blur-md">
+              <span className="material-symbols-outlined text-2xl text-[#FFC300]" style={{ fontVariationSettings: "'FILL' 1" }}>
+                public
+              </span>
             </div>
-            <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider bg-[#D4AF37]/20 text-[#D4AF37] border border-[#D4AF37]/40">
-              Live
+            <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-[#FFB703]/25 text-[#FFC300] border border-[#FFB703]/60 backdrop-blur-md shadow-sm">
+              LIVE ARENA
             </span>
           </div>
-          <div className="relative z-10">
-            <div className="font-headline text-sm font-extrabold text-[#FFF8EE] tracking-wide mb-0.5">
-              Play Online
+
+          {/* Card Content */}
+          <div className="relative z-10 flex items-end justify-between">
+            <div>
+              <div className="font-headline text-base sm:text-lg font-black text-[#FFFDF7] tracking-wider drop-shadow-md">
+                PLAY ONLINE
+              </div>
+              <div className="font-body text-[11px] text-[#E0C8A0] font-medium leading-tight drop-shadow">
+                Ranked matchmaking & arena tournaments
+              </div>
             </div>
-            <div className="font-body text-[10px] text-[#D0C0B0] leading-tight">
-              Instant matchmaking & rated arenas
+            <div className="w-8 h-8 rounded-full bg-[#FFB703]/20 border border-[#FFB703]/60 flex items-center justify-center text-[#FFC300] group-hover:bg-[#FFB703] group-hover:text-[#120B05] group-hover:scale-110 transition-all shadow-md shrink-0">
+              <span className="material-symbols-outlined text-lg">arrow_forward</span>
             </div>
-          </div>
-          <div className="absolute bottom-2 right-2 text-[#D4AF37]/40 group-hover:text-[#D4AF37] group-hover:translate-x-0.5 transition-all">
-            <span className="material-symbols-outlined text-base">arrow_forward</span>
           </div>
         </motion.button>
 
@@ -261,27 +275,41 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ user, onNavigate, onStar
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.15 }}
           onClick={() => onNavigate('bot')}
-          className="group relative p-3 rounded-2xl bg-gradient-to-br from-[#2E2018] via-[#221711] to-[#18110D] shadow-[0_10px_25px_rgba(0,0,0,0.8)] hover:shadow-[0_0_25px_rgba(212,175,55,0.35)] hover:-translate-y-0.5 active:scale-[0.97] transition-all text-left cursor-pointer flex flex-col justify-between overflow-hidden"
+          className="group relative h-36 rounded-2xl overflow-hidden shadow-[0_12px_30px_rgba(0,0,0,0.85)] hover:shadow-[0_0_30px_rgba(0,230,118,0.45)] hover:-translate-y-1 active:scale-[0.98] transition-all text-left cursor-pointer border border-[#00E676]/50 flex flex-col justify-between p-4"
         >
-          <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-[#D4AF37]/15 to-transparent rounded-bl-full pointer-events-none" />
-          <div className="flex items-center justify-between mb-2 relative z-10">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#D4AF37] to-[#B8860B] flex items-center justify-center text-[#120D0A] shadow-[0_0_12px_rgba(212,175,55,0.4)]">
-              <span className="material-symbols-outlined text-lg font-bold">smart_toy</span>
+          {/* Background Image with Ambient Overlay */}
+          <div 
+            className="absolute inset-0 bg-cover bg-center filter brightness-[0.45] contrast-125 group-hover:scale-110 transition-transform duration-700 ease-out"
+            style={{ backgroundImage: `url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=800')` }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#05140B] via-[#0A2414]/75 to-transparent pointer-events-none" />
+          <div className="absolute top-0 right-0 w-32 h-32 bg-radial from-[#00E676]/25 to-transparent blur-xl pointer-events-none" />
+
+          {/* Card Top Row */}
+          <div className="relative z-10 flex items-center justify-between">
+            <div className="w-10 h-10 rounded-xl bg-[#0A2616]/90 border border-[#00E676]/60 flex items-center justify-center shadow-[0_0_12px_rgba(0,230,118,0.4)] backdrop-blur-md">
+              <span className="material-symbols-outlined text-2xl text-[#69F0AE]" style={{ fontVariationSettings: "'FILL' 1" }}>
+                smart_toy
+              </span>
             </div>
-            <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider bg-[#D4AF37]/20 text-[#D4AF37] border border-[#D4AF37]/40">
-              Stockfish
+            <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-[#00E676]/25 text-[#69F0AE] border border-[#00E676]/60 backdrop-blur-md shadow-sm">
+              STOCKFISH 16
             </span>
           </div>
-          <div className="relative z-10">
-            <div className="font-headline text-sm font-extrabold text-[#FFF8EE] tracking-wide mb-0.5">
-              Play vs AI
+
+          {/* Card Content */}
+          <div className="relative z-10 flex items-end justify-between">
+            <div>
+              <div className="font-headline text-base sm:text-lg font-black text-[#F2FFF8] tracking-wider drop-shadow-md">
+                PLAY VS AI
+              </div>
+              <div className="font-body text-[11px] text-[#A2E8BC] font-medium leading-tight drop-shadow">
+                Adaptive grandmaster bots (800–2600 ELO)
+              </div>
             </div>
-            <div className="font-body text-[10px] text-[#D0C0B0] leading-tight">
-              Adaptive bots from 800 to 2600 ELO
+            <div className="w-8 h-8 rounded-full bg-[#00E676]/20 border border-[#00E676]/60 flex items-center justify-center text-[#69F0AE] group-hover:bg-[#00E676] group-hover:text-[#05140B] group-hover:scale-110 transition-all shadow-md shrink-0">
+              <span className="material-symbols-outlined text-lg">arrow_forward</span>
             </div>
-          </div>
-          <div className="absolute bottom-2 right-2 text-[#D4AF37]/40 group-hover:text-[#D4AF37] group-hover:translate-x-0.5 transition-all">
-            <span className="material-symbols-outlined text-base">arrow_forward</span>
           </div>
         </motion.button>
 
@@ -291,27 +319,41 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ user, onNavigate, onStar
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.2 }}
           onClick={() => onNavigate('friend')}
-          className="group relative p-3 rounded-2xl bg-gradient-to-br from-[#2E2018] via-[#221711] to-[#18110D] shadow-[0_10px_25px_rgba(0,0,0,0.8)] hover:shadow-[0_0_25px_rgba(212,175,55,0.35)] hover:-translate-y-0.5 active:scale-[0.97] transition-all text-left cursor-pointer flex flex-col justify-between overflow-hidden"
+          className="group relative h-36 rounded-2xl overflow-hidden shadow-[0_12px_30px_rgba(0,0,0,0.85)] hover:shadow-[0_0_30px_rgba(41,182,246,0.45)] hover:-translate-y-1 active:scale-[0.98] transition-all text-left cursor-pointer border border-[#29B6F6]/50 flex flex-col justify-between p-4"
         >
-          <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-[#D4AF37]/15 to-transparent rounded-bl-full pointer-events-none" />
-          <div className="flex items-center justify-between mb-2 relative z-10">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#D4AF37] to-[#B8860B] flex items-center justify-center text-[#120D0A] shadow-[0_0_12px_rgba(212,175,55,0.4)]">
-              <span className="material-symbols-outlined text-lg font-bold">group</span>
+          {/* Background Image with Ambient Overlay */}
+          <div 
+            className="absolute inset-0 bg-cover bg-center filter brightness-[0.45] contrast-125 group-hover:scale-110 transition-transform duration-700 ease-out"
+            style={{ backgroundImage: `url('https://images.unsplash.com/photo-1586165368502-1bad197a6461?auto=format&fit=crop&q=80&w=800')` }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#061224] via-[#0D203D]/75 to-transparent pointer-events-none" />
+          <div className="absolute top-0 right-0 w-32 h-32 bg-radial from-[#29B6F6]/25 to-transparent blur-xl pointer-events-none" />
+
+          {/* Card Top Row */}
+          <div className="relative z-10 flex items-center justify-between">
+            <div className="w-10 h-10 rounded-xl bg-[#0D223F]/90 border border-[#29B6F6]/60 flex items-center justify-center shadow-[0_0_12px_rgba(41,182,246,0.4)] backdrop-blur-md">
+              <span className="material-symbols-outlined text-2xl text-[#81D4FA]" style={{ fontVariationSettings: "'FILL' 1" }}>
+                groups
+              </span>
             </div>
-            <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider bg-[#D4AF37]/20 text-[#D4AF37] border border-[#D4AF37]/40">
-              Private
+            <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-[#29B6F6]/25 text-[#81D4FA] border border-[#29B6F6]/60 backdrop-blur-md shadow-sm">
+              PRIVATE ROOM
             </span>
           </div>
-          <div className="relative z-10">
-            <div className="font-headline text-sm font-extrabold text-[#FFF8EE] tracking-wide mb-0.5">
-              Play Friend
+
+          {/* Card Content */}
+          <div className="relative z-10 flex items-end justify-between">
+            <div>
+              <div className="font-headline text-base sm:text-lg font-black text-[#F4FAFF] tracking-wider drop-shadow-md">
+                PLAY FRIEND
+              </div>
+              <div className="font-body text-[11px] text-[#93D1F5] font-medium leading-tight drop-shadow">
+                Create room code & challenge buddies
+              </div>
             </div>
-            <div className="font-body text-[10px] text-[#D0C0B0] leading-tight">
-              Create room code & challenge buddy
+            <div className="w-8 h-8 rounded-full bg-[#29B6F6]/20 border border-[#29B6F6]/60 flex items-center justify-center text-[#81D4FA] group-hover:bg-[#29B6F6] group-hover:text-[#061224] group-hover:scale-110 transition-all shadow-md shrink-0">
+              <span className="material-symbols-outlined text-lg">arrow_forward</span>
             </div>
-          </div>
-          <div className="absolute bottom-2 right-2 text-[#D4AF37]/40 group-hover:text-[#D4AF37] group-hover:translate-x-0.5 transition-all">
-            <span className="material-symbols-outlined text-base">arrow_forward</span>
           </div>
         </motion.button>
 
@@ -321,27 +363,41 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ user, onNavigate, onStar
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.25 }}
           onClick={() => onNavigate('learn')}
-          className="group relative p-3 rounded-2xl bg-gradient-to-br from-[#2E2018] via-[#221711] to-[#18110D] shadow-[0_10px_25px_rgba(0,0,0,0.8)] hover:shadow-[0_0_25px_rgba(212,175,55,0.35)] hover:-translate-y-0.5 active:scale-[0.97] transition-all text-left cursor-pointer flex flex-col justify-between overflow-hidden"
+          className="group relative h-36 rounded-2xl overflow-hidden shadow-[0_12px_30px_rgba(0,0,0,0.85)] hover:shadow-[0_0_30px_rgba(171,71,188,0.45)] hover:-translate-y-1 active:scale-[0.98] transition-all text-left cursor-pointer border border-[#AB47BC]/50 flex flex-col justify-between p-4"
         >
-          <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-[#D4AF37]/15 to-transparent rounded-bl-full pointer-events-none" />
-          <div className="flex items-center justify-between mb-2 relative z-10">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#D4AF37] to-[#B8860B] flex items-center justify-center text-[#120D0A] shadow-[0_0_12px_rgba(212,175,55,0.4)]">
-              <span className="material-symbols-outlined text-lg font-bold">psychology</span>
+          {/* Background Image with Ambient Overlay */}
+          <div 
+            className="absolute inset-0 bg-cover bg-center filter brightness-[0.45] contrast-125 group-hover:scale-110 transition-transform duration-700 ease-out"
+            style={{ backgroundImage: `url('https://images.unsplash.com/photo-1580541832626-2a7131ee809f?auto=format&fit=crop&q=80&w=800')` }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#11071F] via-[#210D3D]/75 to-transparent pointer-events-none" />
+          <div className="absolute top-0 right-0 w-32 h-32 bg-radial from-[#AB47BC]/25 to-transparent blur-xl pointer-events-none" />
+
+          {/* Card Top Row */}
+          <div className="relative z-10 flex items-center justify-between">
+            <div className="w-10 h-10 rounded-xl bg-[#23103D]/90 border border-[#AB47BC]/60 flex items-center justify-center shadow-[0_0_12px_rgba(171,71,188,0.4)] backdrop-blur-md">
+              <span className="material-symbols-outlined text-2xl text-[#E1BEE7]" style={{ fontVariationSettings: "'FILL' 1" }}>
+                school
+              </span>
             </div>
-            <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider bg-[#D4AF37]/20 text-[#D4AF37] border border-[#D4AF37]/40">
-              Training
+            <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-[#AB47BC]/25 text-[#E1BEE7] border border-[#AB47BC]/60 backdrop-blur-md shadow-sm">
+              ACADEMY
             </span>
           </div>
-          <div className="relative z-10">
-            <div className="font-headline text-sm font-extrabold text-[#FFF8EE] tracking-wide mb-0.5">
-              Master Academy
+
+          {/* Card Content */}
+          <div className="relative z-10 flex items-end justify-between">
+            <div>
+              <div className="font-headline text-base sm:text-lg font-black text-[#FAF5FF] tracking-wider drop-shadow-md">
+                MASTER ACADEMY
+              </div>
+              <div className="font-body text-[11px] text-[#DCA2E8] font-medium leading-tight drop-shadow">
+                Tactical puzzles & grandmaster openings
+              </div>
             </div>
-            <div className="font-body text-[10px] text-[#D0C0B0] leading-tight">
-              Daily tactical puzzles & openings
+            <div className="w-8 h-8 rounded-full bg-[#AB47BC]/20 border border-[#AB47BC]/60 flex items-center justify-center text-[#E1BEE7] group-hover:bg-[#AB47BC] group-hover:text-[#11071F] group-hover:scale-110 transition-all shadow-md shrink-0">
+              <span className="material-symbols-outlined text-lg">arrow_forward</span>
             </div>
-          </div>
-          <div className="absolute bottom-2 right-2 text-[#D4AF37]/40 group-hover:text-[#D4AF37] group-hover:translate-x-0.5 transition-all">
-            <span className="material-symbols-outlined text-base">arrow_forward</span>
           </div>
         </motion.button>
 
@@ -351,28 +407,40 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ user, onNavigate, onStar
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.3 }}
           onClick={onStartOffline}
-          className="col-span-2 group relative p-3 rounded-2xl bg-gradient-to-br from-[#2E2018] via-[#221711] to-[#18110D] shadow-[0_10px_25px_rgba(0,0,0,0.8)] hover:shadow-[0_0_25px_rgba(212,175,55,0.35)] hover:-translate-y-0.5 active:scale-[0.97] transition-all text-left cursor-pointer flex items-center justify-between overflow-hidden"
+          className="col-span-1 sm:col-span-2 group relative h-28 sm:h-32 rounded-2xl overflow-hidden shadow-[0_12px_30px_rgba(0,0,0,0.85)] hover:shadow-[0_0_30px_rgba(255,152,0,0.45)] hover:-translate-y-1 active:scale-[0.98] transition-all text-left cursor-pointer border border-[#FF9800]/50 flex items-center justify-between p-4"
         >
-          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-[#D4AF37]/15 to-transparent rounded-bl-full pointer-events-none" />
-          <div className="flex items-center gap-3 relative z-10">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#D4AF37] to-[#B8860B] flex items-center justify-center text-[#120D0A] shadow-[0_0_12px_rgba(212,175,55,0.4)]">
-              <span className="material-symbols-outlined text-xl font-bold">phonelink_setup</span>
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-headline text-sm font-extrabold text-[#FFF8EE] tracking-wide">
-                  Pass & Play (Local 2P)
-                </span>
-                <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider bg-[#D4AF37]/20 text-[#D4AF37] border border-[#D4AF37]/40">
-                  Offline
-                </span>
-              </div>
-              <span className="block font-body text-[10px] text-[#D0C0B0] leading-tight">
-                Play locally face-to-face on the same device
+          {/* Background Image with Ambient Overlay */}
+          <div 
+            className="absolute inset-0 bg-cover bg-center filter brightness-[0.4] contrast-125 group-hover:scale-105 transition-transform duration-700 ease-out"
+            style={{ backgroundImage: `url('https://images.unsplash.com/photo-1529699211952-734e80c4d42b?auto=format&fit=crop&q=80&w=1200')` }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#170B04] via-[#261308]/85 to-[#170B04]/90 pointer-events-none" />
+          <div className="absolute top-0 right-0 w-40 h-40 bg-radial from-[#FF9800]/25 to-transparent blur-xl pointer-events-none" />
+
+          {/* Left Side Content */}
+          <div className="relative z-10 flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-[#2D160A]/90 border border-[#FF9800]/60 flex items-center justify-center shadow-[0_0_15px_rgba(255,152,0,0.4)] backdrop-blur-md shrink-0">
+              <span className="material-symbols-outlined text-3xl text-[#FFB74D]" style={{ fontVariationSettings: "'FILL' 1" }}>
+                two_wheeler
               </span>
             </div>
+            <div>
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className="font-headline text-base sm:text-lg font-black text-[#FFF8EE] tracking-wider drop-shadow-md">
+                  PASS & PLAY
+                </span>
+                <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-[#FF9800]/25 text-[#FFB74D] border border-[#FF9800]/60 backdrop-blur-md">
+                  OFFLINE 2P
+                </span>
+              </div>
+              <div className="font-body text-[11px] text-[#E0C0A8] font-medium leading-tight drop-shadow">
+                Play locally face-to-face on the same screen
+              </div>
+            </div>
           </div>
-          <div className="text-[#D4AF37]/40 group-hover:text-[#D4AF37] group-hover:translate-x-0.5 transition-all pr-1">
+
+          {/* Right Action Button */}
+          <div className="relative z-10 w-9 h-9 rounded-full bg-[#FF9800]/20 border border-[#FF9800]/60 flex items-center justify-center text-[#FFB74D] group-hover:bg-[#FF9800] group-hover:text-[#170B04] group-hover:scale-110 transition-all shadow-md shrink-0 ml-2">
             <span className="material-symbols-outlined text-xl">arrow_forward</span>
           </div>
         </motion.button>
