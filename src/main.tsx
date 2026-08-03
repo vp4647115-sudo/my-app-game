@@ -36,3 +36,25 @@ createRoot(document.getElementById('root')!).render(
   </StrictMode>,
 );
 
+// Register Service Worker for PWA
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').then(
+      (registration) => {
+        console.log('SW registered: ', registration);
+      },
+      (registrationError) => {
+        console.log('SW registration failed: ', registrationError);
+      }
+    );
+  });
+} else if ('serviceWorker' in navigator) {
+  // Allow registration in dev environment if needed or register directly
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch((err) => {
+      console.log('SW registration skipped or failed in dev mode:', err);
+    });
+  });
+}
+
+
