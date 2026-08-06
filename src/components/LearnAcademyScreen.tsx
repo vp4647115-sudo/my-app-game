@@ -9,6 +9,7 @@ interface LearnAcademyScreenProps {
   settings: GameSettings;
   onBack: () => void;
   onStartMatch: (config: any) => void;
+  onOpenPayUModal?: () => void;
 }
 
 export const LearnAcademyScreen: React.FC<LearnAcademyScreenProps> = ({
@@ -16,6 +17,7 @@ export const LearnAcademyScreen: React.FC<LearnAcademyScreenProps> = ({
   settings,
   onBack,
   onStartMatch,
+  onOpenPayUModal,
 }) => {
   const [activeTab, setActiveTab] = useState<'tutor' | 'puzzle' | 'openings' | 'practice'>('tutor');
   const { playMove, playCapture, playGameEnd } = useChessAudio(settings);
@@ -280,13 +282,27 @@ export const LearnAcademyScreen: React.FC<LearnAcademyScreenProps> = ({
           </div>
         </div>
 
-        <button
-          onClick={onBack}
-          className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-bold text-[#e3e3de] border border-white/10 flex items-center gap-1.5 transition-all cursor-pointer"
-        >
-          <span className="material-symbols-outlined text-sm">arrow_back</span>
-          <span>Back to Home</span>
-        </button>
+        <div className="flex items-center gap-2">
+          {onOpenPayUModal && (
+            <button
+              onClick={onOpenPayUModal}
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#FFB703] to-[#FF8C00] text-[#120B05] text-xs font-black uppercase tracking-wider shadow-[0_0_15px_rgba(255,183,3,0.3)] hover:brightness-110 active:scale-95 transition-all cursor-pointer flex items-center gap-1.5"
+            >
+              <span className="material-symbols-outlined text-base font-bold" style={{ fontVariationSettings: "'FILL' 1" }}>
+                workspace_premium
+              </span>
+              <span>{user.isPremium ? 'VIP Active' : 'PayU VIP ₹10'}</span>
+            </button>
+          )}
+
+          <button
+            onClick={onBack}
+            className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-bold text-[#e3e3de] border border-white/10 flex items-center gap-1.5 transition-all cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-sm">arrow_back</span>
+            <span>Back to Home</span>
+          </button>
+        </div>
       </div>
 
       {/* Navigation Tabs */}

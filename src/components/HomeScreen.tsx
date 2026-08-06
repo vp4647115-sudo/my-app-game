@@ -7,9 +7,10 @@ interface HomeScreenProps {
   onNavigate: (screen: 'bot' | 'arena' | 'friend' | 'profile' | 'settings' | 'learn') => void;
   onStartOffline: () => void;
   onResumeMatch: (session: OngoingGameSession) => void;
+  onOpenPayUModal?: () => void;
 }
 
-export const HomeScreen: React.FC<HomeScreenProps> = ({ user, onNavigate, onStartOffline, onResumeMatch }) => {
+export const HomeScreen: React.FC<HomeScreenProps> = ({ user, onNavigate, onStartOffline, onResumeMatch, onOpenPayUModal }) => {
   const [ongoingSession, setOngoingSession] = useState<OngoingGameSession | null>(() => {
     try {
       const saved = localStorage.getItem('vpn_chess_ongoing_session');
@@ -148,6 +149,44 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ user, onNavigate, onStar
           </span>
         </div>
       </motion.div>
+
+      {/* PayU VIP Master Upgrade Showcase Banner */}
+      {onOpenPayUModal && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full mb-3.5 p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-[#2C1F0D] via-[#1D1409] to-[#120B05] border border-[#FFB703]/50 shadow-[0_8px_25px_rgba(255,183,3,0.2)] flex flex-col sm:flex-row items-center justify-between gap-3 text-left relative overflow-hidden"
+        >
+          <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-radial from-[#FFB703]/20 to-transparent blur-xl pointer-events-none" />
+          
+          <div className="flex items-center gap-3.5 z-10">
+            <div className="w-11 h-11 rounded-2xl bg-[#FFB703]/20 border border-[#FFB703] flex items-center justify-center text-[#FFC300] shrink-0 shadow-[0_0_15px_rgba(255,183,3,0.4)]">
+              <span className="material-symbols-outlined text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>
+                workspace_premium
+              </span>
+            </div>
+            <div>
+              <div className="font-headline text-xs sm:text-sm font-black text-[#FFFDF7] flex items-center gap-2">
+                <span>CHESS MASTER VIP MEMBERSHIP</span>
+                <span className="px-1.5 py-0.5 bg-[#FFB703] text-[#120B05] rounded text-[8px] font-black uppercase">PayU ₹ INR</span>
+              </div>
+              <div className="font-body text-[11px] text-[#E0C8A0] mt-0.5">
+                {user.isPremium
+                  ? `Active Plan: ${user.premiumPlan || 'VIP Master Pass'} • Unlimited AI Engine & Coach`
+                  : 'Get Stockfish 16 Engine, Gemini AI Coach, 3D Themes & VIP Badge starting at ₹10/mo'}
+              </div>
+            </div>
+          </div>
+
+          <button
+            onClick={onOpenPayUModal}
+            className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#FFB703] to-[#FF8C00] text-[#120B05] font-black text-xs uppercase tracking-wider shadow-md hover:brightness-110 active:scale-95 transition-all cursor-pointer shrink-0 flex items-center justify-center gap-1.5 z-10"
+          >
+            <span>{user.isPremium ? 'Manage VIP Plan' : 'Upgrade via PayU (₹10)'}</span>
+            <span className="material-symbols-outlined text-base">arrow_forward</span>
+          </button>
+        </motion.div>
+      )}
 
       {/* Ongoing Match Reconnection Banner */}
       {ongoingSession && (

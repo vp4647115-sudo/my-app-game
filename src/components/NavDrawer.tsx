@@ -8,6 +8,7 @@ interface NavDrawerProps {
   onNavigate: (screen: 'home' | 'bot' | 'arena' | 'friend' | 'profile' | 'settings' | 'learn') => void;
   onStartOffline: () => void;
   onOpenAuth: () => void;
+  onOpenPayUModal?: () => void;
   onOpenApkInstall?: () => void;
   onOpenGuide?: () => void;
   onSignOut: () => void;
@@ -20,6 +21,7 @@ export const NavDrawer: React.FC<NavDrawerProps> = ({
   onNavigate,
   onStartOffline,
   onOpenAuth,
+  onOpenPayUModal,
   onOpenApkInstall,
   onOpenGuide,
   onSignOut,
@@ -84,6 +86,30 @@ export const NavDrawer: React.FC<NavDrawerProps> = ({
 
           {/* Navigation Links */}
           <nav className="space-y-1.5 font-body text-xs font-semibold">
+            {/* PayU VIP Subscription */}
+            {onOpenPayUModal && (
+              <button
+                onClick={() => {
+                  onOpenPayUModal();
+                  onClose();
+                }}
+                className="w-full flex items-center gap-3.5 px-4 py-3 rounded-xl bg-gradient-to-r from-[#2C1F0D] to-[#1D1409] hover:brightness-110 text-[#FFC300] border border-[#FFB703]/50 shadow-[0_0_15px_rgba(255,183,3,0.2)] transition-all text-left cursor-pointer active:scale-[0.98]"
+              >
+                <span className="material-symbols-outlined text-[#FFC300] text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>
+                  workspace_premium
+                </span>
+                <div className="flex flex-col">
+                  <span className="font-bold text-xs uppercase tracking-wider flex items-center gap-1.5">
+                    <span>VIP Master Membership</span>
+                    <span className="px-1.5 py-0.2 bg-[#FFB703] text-[#120B05] rounded text-[8px] font-black">PayU ₹</span>
+                  </span>
+                  <span className="text-[9px] text-[#E0C8A0] opacity-90">
+                    {user.isPremium ? 'Active Plan: ' + (user.premiumPlan || 'VIP') : 'Unlock Stockfish 16, AI Coach & Badges'}
+                  </span>
+                </div>
+              </button>
+            )}
+
             <button
               onClick={() => {
                 onNavigate('home');

@@ -6,6 +6,7 @@ interface ProfileScreenProps {
   matchHistory: MatchHistoryItem[];
   onOpenEditModal: () => void;
   onUpdateProfile?: (updated: UserProfile) => void;
+  onOpenPayUModal?: () => void;
   onBack?: () => void;
 }
 
@@ -14,6 +15,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   matchHistory,
   onOpenEditModal,
   onUpdateProfile,
+  onOpenPayUModal,
   onBack,
 }) => {
   const [filterResult, setFilterResult] = useState<'ALL' | 'WIN' | 'LOSS' | 'DRAW'>('ALL');
@@ -161,6 +163,44 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           </span>
         </div>
       </section>
+
+      {/* PayU VIP Master Membership Card */}
+      {onOpenPayUModal && (
+        <section className="glass-panel p-5 md:p-6 rounded-2xl border border-[#FFB703]/50 bg-gradient-to-r from-[#2C1F0D] via-[#1D1409] to-[#120B05] shadow-[0_10px_30px_rgba(255,183,3,0.15)] flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-[#FFB703]/20 border border-[#FFB703] flex items-center justify-center text-[#FFC300] shrink-0 shadow-[0_0_20px_rgba(255,183,3,0.4)]">
+              <span className="material-symbols-outlined text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>
+                workspace_premium
+              </span>
+            </div>
+            <div>
+              <div className="font-headline text-base font-black text-[#FFFDF7] flex items-center gap-2">
+                <span>VIP MASTER SUBSCRIPTION STATUS</span>
+                <span className="px-2 py-0.5 bg-[#FFB703] text-[#120B05] rounded text-[9px] font-black uppercase">PayU INR ₹</span>
+              </div>
+              <div className="font-body text-xs text-[#E0C8A0] mt-1">
+                {user.isPremium ? (
+                  <span className="text-[#FFC300] font-bold">
+                    ACTIVE: {user.premiumPlan || 'VIP Gold Member'} • Full Stockfish 16 Engine & AI Coach
+                  </span>
+                ) : (
+                  <span>
+                    No active subscription. Upgrade to Gold (₹10/mo), Diamond (₹100/6mo) or Lifetime VIP (₹500).
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <button
+            onClick={onOpenPayUModal}
+            className="w-full md:w-auto px-6 py-3 rounded-xl bg-gradient-to-r from-[#FFB703] to-[#FF8C00] text-[#120B05] font-black text-xs uppercase tracking-wider shadow-[0_0_15px_rgba(255,183,3,0.3)] hover:brightness-110 active:scale-95 transition-all cursor-pointer shrink-0 flex items-center justify-center gap-2"
+          >
+            <span>{user.isPremium ? 'Upgrade / Manage VIP Plan' : 'Pay via PayU Gateway (₹10)'}</span>
+            <span className="material-symbols-outlined text-base">arrow_forward</span>
+          </button>
+        </section>
+      )}
 
       {/* Stats Bento Grid */}
       <section className="grid grid-cols-2 md:grid-cols-4 gap-4">

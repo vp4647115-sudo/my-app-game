@@ -86,79 +86,100 @@ export const LoginLandingScreen: React.FC<LoginLandingScreenProps> = ({
 
     try {
       if (activeTab === 'signup') {
-        // Try Firebase Registration first
-        try {
-          const fbUser = await registerWithEmailFirebase(email, password, fullName || email.split('@')[0]);
-          if (fbUser) {
-            onLoginSuccess(email, fullName || fbUser.displayName || email.split('@')[0]);
-            return;
-          }
-        } catch (fbErr: any) {
-          console.warn('Firebase registration notice:', fbErr?.message);
-          if (fbErr?.code === 'auth/weak-password') {
-            throw new Error('Password must be at least 6 characters.');
-          }
-        }
-
-        // Supabase Fallback
+        // Register & Create Account using Supabase API (.env keys) as primary
         const client = getSupabase();
+        let registered = false;
+        const displayName = fullName || email.split('@')[0];
+
         if (client) {
           try {
             const { data, error } = await client.auth.signUp({
               email,
               password,
               options: {
-                data: { full_name: fullName || email.split('@')[0] },
+                data: { full_name: displayName },
               },
             });
             if (error) {
-              console.warn('Supabase registration notice (graceful fallback):', error.message);
-            } else if (data?.user && !data.session) {
-              setInfoMsg('Account created successfully!');
-              setLoading(false);
-              setTimeout(() => {
-                onLoginSuccess(email, fullName || email.split('@')[0]);
-              }, 800);
-              return;
+              console.warn('Supabase register notice:', error.message);
+              if (error.message?.toLowerCase().includes('already registered')) {
+                throw new Error('An account with this email already exists.');
+              }
+            } else if (data?.user) {
+              registered = true;
+              if (!data.session) {
+                setInfoMsg('Account created successfully on Supabase! Entering game...');
+              }
             }
           } catch (sbErr: any) {
-            console.warn('Supabase registration exception:', sbErr?.message);
-          }
-        }
-      } else {
-        // Try Firebase Sign In first
-        try {
-          const fbUser = await signInWithEmailFirebase(email, password);
-          if (fbUser) {
-            onLoginSuccess(email, fbUser.displayName || fullName || email.split('@')[0]);
-            return;
-          }
-        } catch (fbErr: any) {
-          console.warn('Firebase sign-in notice:', fbErr?.message);
-          if (fbErr?.code === 'auth/wrong-password' || fbErr?.code === 'auth/invalid-credential') {
-            throw new Error('Invalid email or password. Please verify your credentials.');
+            if (sbErr?.message?.includes('already exists')) throw sbErr;
+            console.warn('Supabase register fallback notice:', sbErr?.message);
           }
         }
 
-        // Supabase Fallback
+        // Firebase Fallback/Sync for account creation
+        if (!registered) {
+          try {
+            const fbUser = await registerWithEmailFirebase(email, password, displayName);
+            if (fbUser) {
+              registered = true;
+            }
+          } catch (fbErr: any) {
+            console.warn('Firebase registration notice:', fbErr?.message);
+            if (fbErr?.code === 'auth/weak-password') {
+              throw new Error('Password must be at least 6 characters.');
+            }
+            if (fbErr?.code === 'auth/email-already-in-use') {
+              throw new Error('An account with this email already exists.');
+            }
+          }
+        }
+
+        onLoginSuccess(email, displayName);
+        return;
+      } else {
+        // Email Sign In using Supabase API (.env keys) as primary
         const client = getSupabase();
+        let loggedIn = false;
+
         if (client) {
           try {
-            const { error } = await client.auth.signInWithPassword({ email, password });
+            const { data, error } = await client.auth.signInWithPassword({ email, password });
             if (error) {
-              console.warn('Supabase sign-in notice (graceful fallback):', error.message);
+              console.warn('Supabase sign-in notice:', error.message);
               if (error.message?.toLowerCase().includes('invalid login credentials')) {
                 throw new Error('Invalid email or password. Please check your credentials.');
               }
+            } else if (data?.user) {
+              loggedIn = true;
+              const name = data.user.user_metadata?.full_name || fullName || email.split('@')[0];
+              onLoginSuccess(email, name);
+              return;
             }
           } catch (sbErr: any) {
             if (sbErr.message?.includes('Invalid email or password')) throw sbErr;
             console.warn('Supabase sign-in exception:', sbErr?.message);
           }
         }
-      }
 
-      onLoginSuccess(email, fullName || email.split('@')[0]);
+        // Firebase Fallback for Sign In
+        if (!loggedIn) {
+          try {
+            const fbUser = await signInWithEmailFirebase(email, password);
+            if (fbUser) {
+              onLoginSuccess(email, fbUser.displayName || fullName || email.split('@')[0]);
+              return;
+            }
+          } catch (fbErr: any) {
+            console.warn('Firebase sign-in notice:', fbErr?.message);
+            if (fbErr?.code === 'auth/wrong-password' || fbErr?.code === 'auth/invalid-credential') {
+              throw new Error('Invalid email or password. Please verify your credentials.');
+            }
+          }
+        }
+
+        onLoginSuccess(email, fullName || email.split('@')[0]);
+      }
     } catch (err: any) {
       setErrorMsg(err.message || 'Authentication error. Please check your email and password.');
     } finally {

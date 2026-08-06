@@ -9,6 +9,7 @@ interface HeaderNavProps {
   onOpenProfile?: () => void;
   onOpenSettings?: () => void;
   onOpenAuth?: () => void;
+  onOpenPayUModal?: () => void;
   onSignOut?: () => void;
   showBack?: boolean;
   onBack?: () => void;
@@ -21,6 +22,7 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({
   onOpenProfile,
   onOpenSettings,
   onOpenAuth,
+  onOpenPayUModal,
   onSignOut,
   showBack,
   onBack,
@@ -59,6 +61,26 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({
       </div>
 
       <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3 shrink-0">
+        {/* PayU Premium VIP Button */}
+        {onOpenPayUModal && (
+          <button
+            onClick={onOpenPayUModal}
+            className={`px-2 sm:px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-black uppercase tracking-wider flex items-center gap-1 transition-all cursor-pointer shadow-md active:scale-95 border ${
+              user.isPremium
+                ? 'bg-gradient-to-r from-[#FFB703] to-[#FF8C00] text-[#120B05] border-[#FFB703] shadow-[0_0_12px_rgba(255,183,3,0.5)]'
+                : 'bg-[#2C1F0D] hover:bg-[#3D2C14] text-[#FFC300] border-[#FFB703]/60 shadow-[0_0_8px_rgba(255,183,3,0.3)]'
+            }`}
+            title="Upgrade to Master VIP with PayU INR"
+          >
+            <span className="material-symbols-outlined text-sm font-bold text-[#FFC300]" style={{ fontVariationSettings: "'FILL' 1" }}>
+              workspace_premium
+            </span>
+            <span className="whitespace-nowrap">
+              {user.isPremium ? (user.premiumPlan || 'VIP PRO') : 'PayU VIP ₹10'}
+            </span>
+          </button>
+        )}
+
         <ThemeToggle className="scale-75 sm:scale-90 origin-right" />
 
         {/* Logout Button with Small Icon */}

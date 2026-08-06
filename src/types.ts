@@ -26,6 +26,87 @@ export interface UserProfile {
   weeklyEloChange: number;
   linkedGoogle: boolean;
   jwtActive: boolean;
+  isPremium?: boolean;
+  premiumPlan?: 'Starter' | 'Gold' | 'Diamond' | 'Lifetime' | string;
+  vipBadge?: boolean;
+  coins?: number;
+  gems?: number;
+  battlePassUnlocked?: boolean;
+  inventory?: string[];
+  membershipExpiresAt?: string;
+}
+
+export interface PayUStorePackage {
+  id: string;
+  category: 'membership' | 'coins' | 'gems' | 'cosmetics' | 'battlepass';
+  name: string;
+  badge?: string;
+  priceINR: number;
+  originalPriceINR?: number;
+  period?: string;
+  coinsReward?: number;
+  gemsReward?: number;
+  popular?: boolean;
+  bestValue?: boolean;
+  features: string[];
+}
+
+export interface PayUOrderTransaction {
+  orderId: string;
+  txnid: string;
+  userId: string;
+  userEmail: string;
+  itemCategory: string;
+  itemId: string;
+  itemName: string;
+  amountINR: number;
+  discountINR: number;
+  netAmountINR: number;
+  couponCode?: string;
+  paymentMethod: 'upi' | 'card' | 'netbanking' | 'wallet' | 'payu_express';
+  paymentStatus: 'SUCCESS' | 'FAILED' | 'PENDING' | 'REFUNDED';
+  payuHash: string;
+  timestamp: string;
+  invoiceUrl?: string;
+  rewardsDelivered: {
+    coins?: number;
+    gems?: number;
+    isPremium?: boolean;
+    planName?: string;
+    itemUnlocked?: string;
+  };
+}
+
+export interface PayUCoupon {
+  code: string;
+  discountPercent: number;
+  flatDiscountINR: number;
+  minPurchaseINR: number;
+  validUntil: string;
+  description: string;
+  active: boolean;
+}
+
+export interface PayUInvoice {
+  invoiceNumber: string;
+  txnid: string;
+  orderId: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  itemName: string;
+  category: string;
+  amountINR: number;
+  discountINR: number;
+  gstINR: number;
+  totalINR: number;
+  date: string;
+  paymentStatus: string;
+  merchantDetails: {
+    name: string;
+    gstin: string;
+    supportEmail: string;
+  };
 }
 
 export interface GameSettings {

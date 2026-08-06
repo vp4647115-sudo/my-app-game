@@ -40,6 +40,7 @@ import { LoginLandingScreen } from './components/LoginLandingScreen';
 import { NavDrawer } from './components/NavDrawer';
 import { ApkInstallModal } from './components/ApkInstallModal';
 import { OnboardingModal } from './components/OnboardingModal';
+import { PayUPremiumModal } from './components/PayUPremiumModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
 export default function App() {
@@ -123,6 +124,49 @@ export default function App() {
     };
   }, []);
 
+  // Listen for PayU Callback Return Query Parameters (?payu_status=success)
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const payuStatus = urlParams.get('payu_status');
+    const udf1 = urlParams.get('udf1');
+
+    if (payuStatus === 'success') {
+      const isLifetime = udf1 === 'lifetime_vip';
+      const isStarter = udf1 === 'starter_offer';
+      const isMonthly = udf1 === 'monthly_vip';
+      const isAnnual = udf1 === 'annual_vip';
+      const isCoins = udf1?.includes('coins');
+      const isGems = udf1?.includes('gems');
+      const isBattlePass = udf1 === 'pass_season1';
+
+      setUser((prev) => {
+        const updated: UserProfile = {
+          ...prev,
+          isPremium: true,
+          premiumPlan: isLifetime
+            ? 'Lifetime Grandmaster VIP'
+            : isMonthly
+            ? 'Monthly VIP Master'
+            : isAnnual
+            ? 'Annual Pro VIP'
+            : 'Chess Master VIP',
+          vipBadge: true,
+          coins: prev.coins + (isStarter ? 1000 : isCoins ? 5000 : 2000),
+          gems: prev.gems + (isStarter ? 250 : isGems ? 500 : 100),
+          ...(isBattlePass && { battlePassUnlocked: true }),
+          title: isLifetime ? 'GM VIP' : prev.title || 'Master',
+          elo: prev.elo + 100,
+        };
+        saveUserProfile(updated);
+        return updated;
+      });
+
+      // Clear query params from browser URL cleanly without reloading
+      window.history.replaceState({}, document.title, window.location.pathname);
+      setIsPayUModalOpen(true);
+    }
+  }, []);
+
   // Navigation State
   const [currentScreen, setCurrentScreen] = useState<
     'home' | 'bot' | 'arena' | 'friend' | 'profile' | 'settings' | 'game' | 'learn'
@@ -135,6 +179,7 @@ export default function App() {
   // Modals & Navigation Drawer
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [isPayUModalOpen, setIsPayUModalOpen] = useState(false);
   const [isNavDrawerOpen, setIsNavDrawerOpen] = useState(false);
   const [isApkInstallOpen, setIsApkInstallOpen] = useState(false);
   const [isGuideOpen, setIsGuideOpen] = useState<boolean>(() => {
@@ -242,11 +287,15 @@ export default function App() {
   };
 
   // Save profile updates
-  const handleSaveProfile = (updated: UserProfile) => {
-    setUser(updated);
-    saveUserProfile(updated);
+  const handleSaveProfile = (updated: Partial<UserProfile>) => {
+    const fullUser: UserProfile = {
+      ...user,
+      ...updated,
+    };
+    setUser(fullUser);
+    saveUserProfile(fullUser);
     if (firebaseAuth.currentUser?.uid) {
-      saveFirebaseUserProfile(firebaseAuth.currentUser.uid, updated);
+      saveFirebaseUserProfile(firebaseAuth.currentUser.uid, fullUser);
     }
   };
 
@@ -310,6 +359,7 @@ export default function App() {
               onOpenProfile={() => handleNavigate('profile')}
               onOpenSettings={() => handleNavigate('settings')}
               onOpenAuth={() => setIsAuthOpen(true)}
+              onOpenPayUModal={() => setIsPayUModalOpen(true)}
               onSignOut={handleSignOut}
               showBack={currentScreen !== 'home'}
               onBack={() => setCurrentScreen('home')}
@@ -324,6 +374,7 @@ export default function App() {
                 onNavigate={handleNavigate}
                 onStartOffline={handleStartOfflineMatch}
                 onResumeMatch={handleResumeMatch}
+                onOpenPayUModal={() => setIsPayUModalOpen(true)}
               />
             )}
 
@@ -333,6 +384,7 @@ export default function App() {
                 settings={settings}
                 onBack={() => setCurrentScreen('home')}
                 onStartMatch={handleStartMatch}
+                onOpenPayUModal={() => setIsPayUModalOpen(true)}
               />
             )}
 
@@ -366,6 +418,7 @@ export default function App() {
                 matchHistory={matchHistory}
                 onOpenEditModal={() => setIsEditProfileOpen(true)}
                 onUpdateProfile={handleSaveProfile}
+                onOpenPayUModal={() => setIsPayUModalOpen(true)}
                 onBack={currentScreen === 'profile' && activeTab === 'home' ? () => setCurrentScreen('home') : undefined}
               />
             )}
@@ -407,9 +460,17 @@ export default function App() {
             onNavigate={handleNavigate}
             onStartOffline={handleStartOfflineMatch}
             onOpenAuth={() => setIsAuthOpen(true)}
+            onOpenPayUModal={() => setIsPayUModalOpen(true)}
             onOpenApkInstall={() => setIsApkInstallOpen(true)}
             onOpenGuide={() => setIsGuideOpen(true)}
             onSignOut={handleSignOut}
+          />
+
+          <PayUPremiumModal
+            isOpen={isPayUModalOpen}
+            onClose={() => setIsPayUModalOpen(false)}
+            user={user}
+            onUpdateUser={handleSaveProfile}
           />
 
           <OnboardingModal
