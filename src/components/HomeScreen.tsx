@@ -168,7 +168,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ user, onNavigate, onStar
             <div>
               <div className="font-headline text-xs sm:text-sm font-black text-[#FFFDF7] flex items-center gap-2">
                 <span>CHESS MASTER VIP MEMBERSHIP</span>
-                <span className="px-1.5 py-0.5 bg-[#FFB703] text-[#120B05] rounded text-[8px] font-black uppercase">PayU ₹ INR</span>
+                <span className="px-1.5 py-0.5 bg-[#FFB703] text-[#120B05] rounded text-[8px] font-black uppercase">SUBSCRIPTION ₹ INR</span>
               </div>
               <div className="font-body text-[11px] text-[#E0C8A0] mt-0.5">
                 {user.isPremium
@@ -182,7 +182,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ user, onNavigate, onStar
             onClick={onOpenPayUModal}
             className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#FFB703] to-[#FF8C00] text-[#120B05] font-black text-xs uppercase tracking-wider shadow-md hover:brightness-110 active:scale-95 transition-all cursor-pointer shrink-0 flex items-center justify-center gap-1.5 z-10"
           >
-            <span>{user.isPremium ? 'Manage VIP Plan' : 'Upgrade via PayU (₹10)'}</span>
+            <span>{user.isPremium ? 'Manage Subscription' : 'Get Subscription (₹10)'}</span>
             <span className="material-symbols-outlined text-base">arrow_forward</span>
           </button>
         </motion.div>

@@ -70,13 +70,13 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({
                 ? 'bg-gradient-to-r from-[#FFB703] to-[#FF8C00] text-[#120B05] border-[#FFB703] shadow-[0_0_12px_rgba(255,183,3,0.5)]'
                 : 'bg-[#2C1F0D] hover:bg-[#3D2C14] text-[#FFC300] border-[#FFB703]/60 shadow-[0_0_8px_rgba(255,183,3,0.3)]'
             }`}
-            title="Upgrade to Master VIP with PayU INR"
+            title="Upgrade to Master VIP Subscription"
           >
             <span className="material-symbols-outlined text-sm font-bold text-[#FFC300]" style={{ fontVariationSettings: "'FILL' 1" }}>
               workspace_premium
             </span>
             <span className="whitespace-nowrap">
-              {user.isPremium ? (user.premiumPlan || 'VIP PRO') : 'PayU VIP ₹10'}
+              {user.isPremium ? (user.premiumPlan || 'VIP PRO') : 'Subscription ₹10'}
             </span>
           </button>
         )}

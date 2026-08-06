@@ -11,10 +11,10 @@ interface PayUPremiumModalProps {
 
 export const MEMBERSHIP_PACKAGES: PayUStorePackage[] = [
   {
-    id: 'starter_offer',
+    id: 'plus_plan',
     category: 'membership',
-    name: 'Starter VIP Pass',
-    badge: '₹10 SPECIAL OFFER',
+    name: 'Plus',
+    badge: 'PLUS ₹10',
     priceINR: 10,
     originalPriceINR: 99,
     period: '/ month',
@@ -23,16 +23,16 @@ export const MEMBERSHIP_PACKAGES: PayUStorePackage[] = [
     features: [
       'Unlimited Stockfish 16 Engine Analysis',
       'Gemini AI Grandmaster Coach Access',
-      'Gold VIP Profile Badge',
+      'Plus Profile Badge',
       '+200 Coins & 20 Gems Starter Bonus',
-      '100% Ad-Free Master Experience'
+      '100% Ad-Free Experience'
     ]
   },
   {
-    id: 'monthly_vip',
+    id: 'pro_plan',
     category: 'membership',
-    name: 'Monthly Pro Master',
-    badge: 'POPULAR',
+    name: 'Pro',
+    badge: 'PRO ₹100',
     priceINR: 100,
     originalPriceINR: 199,
     period: '/ month',
@@ -40,18 +40,18 @@ export const MEMBERSHIP_PACKAGES: PayUStorePackage[] = [
     coinsReward: 1000,
     gemsReward: 100,
     features: [
-      'All Starter VIP Benefits',
-      'Unlimited Master Academy Tactical Puzzles',
+      'All Plus Plan Benefits',
+      'Unlimited Master Tactical Puzzles',
       'Priority Matchmaking Queue (0s Wait)',
       '+1000 Coins & 100 Gems Monthly Multiplier',
-      'Custom Title & Board Customizations'
+      'Custom Pro Title & Board Customizations'
     ]
   },
   {
-    id: 'lifetime_vip',
+    id: 'pro_plus_plan',
     category: 'membership',
-    name: 'Lifetime Grandmaster',
-    badge: 'BEST OFFER ₹500',
+    name: 'Pro Plus',
+    badge: 'PRO PLUS ₹500',
     priceINR: 500,
     originalPriceINR: 4999,
     period: 'one-time forever',
@@ -61,7 +61,7 @@ export const MEMBERSHIP_PACKAGES: PayUStorePackage[] = [
     features: [
       'Lifetime Access to All Future Updates',
       'All 3D & Obsidian Chess Board Skins Unlocked',
-      'Lifetime GM Crown VIP Badge',
+      'Lifetime Pro Plus Crown Badge',
       'Season 1 Battle Pass Included',
       '+5000 Coins & 500 Gems Instant Drop'
     ]
@@ -87,7 +87,7 @@ export const COSMETIC_PACKAGES: PayUStorePackage[] = [
   { id: 'skin_3d_metallic', category: 'cosmetics', name: '3D Metallic Piece Set', priceINR: 99, features: ['Shimmering Chrome & Brass Pieces'] },
 ];
 
-const PAYU_DIRECT_LINK = 'https://u.payu.in/PAYUMN/BIEPs3M9mUvp';
+const PAYU_DIRECT_LINK = 'https://u.payu.in/frXSvUbzCwhb';
 
 export const PayUPremiumModal: React.FC<PayUPremiumModalProps> = ({
   isOpen,
@@ -96,18 +96,26 @@ export const PayUPremiumModal: React.FC<PayUPremiumModalProps> = ({
   onUpdateUser,
 }) => {
   const [activeTab, setActiveTab] = useState<'membership' | 'coins' | 'gems' | 'battlepass' | 'history' | 'admin'>('membership');
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
+  const [membershipView, setMembershipView] = useState<'cards' | 'comparison'>('cards');
   const [selectedPackage, setSelectedPackage] = useState<PayUStorePackage>(MEMBERSHIP_PACKAGES[0]);
   const [paymentStep, setPaymentStep] = useState<'shop' | 'checkout' | 'qr_scan' | 'processing' | 'success'>('shop');
   const [payuMethod, setPayuMethod] = useState<'upi' | 'card' | 'netbanking' | 'wallet'>('upi');
   
   // Checkout Form State
-  const [upiId, setUpiId] = useState('masterplayer@paytm');
+  const [upiId, setUpiId] = useState('vp4647115-3@okaxis');
   const [utrNumber, setUtrNumber] = useState('');
   const [phone, setPhone] = useState('9876543210');
   const [cardNumber, setCardNumber] = useState('4532 8900 1234 5678');
   const [cardExpiry, setCardExpiry] = useState('12/28');
   const [cardCvv, setCardCvv] = useState('888');
   const [showQrCodeScanner, setShowQrCodeScanner] = useState(true);
+
+  // Payment Screenshot Scan & Verification State
+  const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
+  const [isScanningScreenshot, setIsScanningScreenshot] = useState(false);
+  const [screenshotScanStatus, setScreenshotScanStatus] = useState<string>('');
+  const [extractedReceipt, setExtractedReceipt] = useState<any | null>(null);
 
   // Verification step stages
   const [verificationProgress, setVerificationProgress] = useState<string>('Initiating PayU Gateway...');
@@ -135,6 +143,24 @@ export const PayUPremiumModal: React.FC<PayUPremiumModalProps> = ({
     window.open(PAYU_DIRECT_LINK, '_blank', 'noopener,noreferrer');
   };
 
+  const payViaUpiApp = (appName: string, appScheme?: string) => {
+    const finalPrice = appliedCoupon ? appliedCoupon.finalINR : selectedPackage.priceINR;
+    const upiUri = `upi://pay?pa=vp4647115-3@okaxis&pn=ChessMaster&am=${finalPrice}&cu=INR&tn=${encodeURIComponent(selectedPackage.name)}`;
+    
+    try {
+      if (appScheme) {
+        window.location.href = `${appScheme}://${upiUri.replace('upi://', '')}`;
+      } else {
+        window.location.href = upiUri;
+      }
+    } catch {
+      window.open(PAYU_DIRECT_LINK, '_blank', 'noopener,noreferrer');
+    }
+    
+    setQrTimerSeconds(299);
+    setPaymentStep('qr_scan');
+  };
+
   const copyPayULinkToClipboard = () => {
     navigator.clipboard?.writeText(PAYU_DIRECT_LINK);
     setCopiedPayuLink(true);
@@ -159,7 +185,7 @@ export const PayUPremiumModal: React.FC<PayUPremiumModalProps> = ({
   };
 
   const copyVpaToClipboard = () => {
-    navigator.clipboard?.writeText('payu.chessmaster@icici');
+    navigator.clipboard?.writeText('vp4647115-3@okaxis');
     setCopiedVpa(true);
     setTimeout(() => setCopiedVpa(false), 2000);
   };
@@ -306,6 +332,103 @@ export const PayUPremiumModal: React.FC<PayUPremiumModalProps> = ({
     }
   };
 
+  const handleScreenshotChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setErrorMsg('');
+    const reader = new FileReader();
+    reader.onload = () => {
+      setScreenshotPreview(reader.result as string);
+      setExtractedReceipt(null);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleScanAndVerifyScreenshot = async () => {
+    if (!screenshotPreview) {
+      setErrorMsg('Please upload or select a payment screenshot image first.');
+      return;
+    }
+
+    setIsScanningScreenshot(true);
+    setErrorMsg('');
+    setScreenshotScanStatus('AI Scanning Payment Receipt & Checking OCR...');
+
+    try {
+      await new Promise((r) => setTimeout(r, 800));
+      setScreenshotScanStatus('Extracting 12-Digit UPI UTR / Ref Transaction No...');
+
+      const res = await fetch('/api/payu/verify-screenshot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imageBase64: screenshotPreview,
+          expectedAmount: currentPrice,
+          packageName: selectedPackage.name,
+          providedUtr: utrNumber
+        })
+      });
+
+      const data = await res.json();
+
+      await new Promise((r) => setTimeout(r, 700));
+      setScreenshotScanStatus('Matching VPA vp4647115-3@okaxis & Paid Status...');
+
+      await new Promise((r) => setTimeout(r, 600));
+
+      if (data.success && data.verified) {
+        setExtractedReceipt(data.extractedData);
+        if (data.extractedData?.utr) {
+          setUtrNumber(data.extractedData.utr);
+        }
+
+        // Award membership rewards
+        const newCoins = (user.coins || 0) + (selectedPackage.coinsReward || 0);
+        const newGems = (user.gems || 0) + (selectedPackage.gemsReward || 0);
+        const isMembership = selectedPackage.category === 'membership';
+        const isBattlePass = selectedPackage.category === 'battlepass';
+
+        const updatedUserProps: Partial<UserProfile> = {
+          coins: newCoins,
+          gems: newGems,
+          ...(isMembership && {
+            isPremium: true,
+            premiumPlan: selectedPackage.name,
+            vipBadge: true,
+            title: selectedPackage.id === 'pro_plus_plan' ? 'Pro Plus GM' : user.title || 'Master',
+            elo: user.elo + 100
+          }),
+          ...(isBattlePass && { battlePassUnlocked: true })
+        };
+
+        onUpdateUser(updatedUserProps);
+
+        const newRecord = {
+          txnid: data.txnid || 'PAYU_SCAN_' + Date.now(),
+          itemName: selectedPackage.name,
+          category: selectedPackage.category,
+          amountINR: currentPrice,
+          date: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+          status: 'SUCCESS',
+          invoiceUrl: data.invoiceUrl
+        };
+
+        const updatedTxns = [newRecord, ...myTransactions];
+        setMyTransactions(updatedTxns);
+        localStorage.setItem('payu_user_txns', JSON.stringify(updatedTxns));
+
+        setPaymentStep('success');
+      } else {
+        setErrorMsg(data.error || 'Payment receipt verification failed. Please upload a clear receipt screenshot showing PAID status.');
+      }
+    } catch (err) {
+      setErrorMsg('Failed to verify screenshot receipt. Please try again or submit UTR manually.');
+    } finally {
+      setIsScanningScreenshot(false);
+      setScreenshotScanStatus('');
+    }
+  };
+
   const handleCompletePayment = async () => {
     setPaymentStep('processing');
     setVerificationProgress('Connecting to PayU India Gateway...');
@@ -415,13 +538,13 @@ export const PayUPremiumModal: React.FC<PayUPremiumModalProps> = ({
               </div>
               <div>
                 <h2 className="font-headline text-base sm:text-lg font-black text-[#FFFDF7] tracking-wider flex items-center gap-2">
-                  CHESS MASTER PAYU STORE
+                  CHESS MASTER SUBSCRIPTION STORE
                   <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-[#FFB703] text-[#120B05]">
                     INR ₹
                   </span>
                 </h2>
                 <p className="font-body text-xs text-[#E0C8A0]">
-                  Official PayU India Payment Gateway • Instant Delivery
+                  Official Secure Payment Gateway • Instant Delivery
                 </p>
               </div>
             </div>
@@ -476,53 +599,187 @@ export const PayUPremiumModal: React.FC<PayUPremiumModalProps> = ({
           <div className="p-4 sm:p-6 max-h-[75vh] overflow-y-auto">
             {paymentStep === 'shop' && (
               <>
-                {/* VIP Membership Tab */}
+                {/* VIP Membership Tab - Interactive Pricing */}
                 {activeTab === 'membership' && (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
-                      {MEMBERSHIP_PACKAGES.map((pkg) => (
-                        <div
-                          key={pkg.id}
-                          className="relative rounded-2xl p-4 bg-gradient-to-b from-[#2C1F0D] via-[#1D1409] to-[#141619] border border-[#FFB703]/50 shadow-[0_0_20px_rgba(255,183,3,0.15)] flex flex-col justify-between"
+                  <div className="space-y-6">
+                    {/* Header Controls: Billing Cycle Toggle & View Mode */}
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 rounded-2xl bg-[#1A1D21] border border-white/10">
+                      {/* Monthly / Annual Toggle */}
+                      <div className="flex items-center gap-3">
+                        <span className={`text-xs font-bold transition-colors ${billingCycle === 'monthly' ? 'text-[#FFC300]' : 'text-white/60'}`}>
+                          Monthly
+                        </span>
+                        <button
+                          onClick={() => setBillingCycle(prev => prev === 'monthly' ? 'annual' : 'monthly')}
+                          className="relative w-12 h-6 rounded-full bg-[#141619] border border-[#FFB703]/50 p-0.5 cursor-pointer transition-colors"
                         >
-                          {pkg.badge && (
-                            <div className="absolute -top-2.5 right-3 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-[#FFB703] text-[#120B05]">
-                              {pkg.badge}
-                            </div>
-                          )}
+                          <div className={`w-5 h-5 rounded-full bg-gradient-to-r from-[#FFB703] to-[#FF8C00] shadow-md transition-transform duration-200 ${billingCycle === 'annual' ? 'translate-x-6' : 'translate-x-0'}`} />
+                        </button>
+                        <span className={`text-xs font-bold transition-colors ${billingCycle === 'annual' ? 'text-[#FFC300]' : 'text-white/60'}`}>
+                          Annual
+                        </span>
+                        {billingCycle === 'annual' && (
+                          <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-[#29B6F6] text-[#060E1A]">
+                            SAVE 20%
+                          </span>
+                        )}
+                      </div>
 
-                          <div>
-                            <h3 className="font-headline text-sm font-black text-white">{pkg.name}</h3>
-                            <div className="flex items-baseline gap-1.5 my-2">
-                              <span className="font-headline text-2xl font-black text-[#FFC300]">
-                                ₹{pkg.priceINR}
-                              </span>
-                              {pkg.originalPriceINR && (
-                                <span className="text-xs text-white/40 line-through">₹{pkg.originalPriceINR}</span>
-                              )}
-                              <span className="text-[10px] text-white/60">{pkg.period}</span>
-                            </div>
-
-                            <ul className="space-y-1.5 my-3 text-[11px] text-[#E0C8A0]">
-                              {pkg.features.map((f, i) => (
-                                <li key={i} className="flex items-start gap-1">
-                                  <span className="material-symbols-outlined text-xs text-[#FFC300] shrink-0 mt-0.5">check_circle</span>
-                                  <span>{f}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-
-                          <button
-                            onClick={() => handleInitiatePayU(pkg)}
-                            className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#FFB703] to-[#FF8C00] text-[#120B05] font-black text-xs uppercase tracking-wider shadow-md hover:brightness-110 active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-1 mt-2"
-                          >
-                            <span>Buy via PayU (₹{pkg.priceINR})</span>
-                            <span className="material-symbols-outlined text-sm">arrow_forward</span>
-                          </button>
-                        </div>
-                      ))}
+                      {/* Pricing vs Comparison Switcher */}
+                      <div className="flex items-center p-1 rounded-xl bg-[#141619] border border-white/10">
+                        <button
+                          onClick={() => setMembershipView('cards')}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            membershipView === 'cards'
+                              ? 'bg-gradient-to-r from-[#FFB703] to-[#FF8C00] text-[#120B05] shadow-md'
+                              : 'text-white/60 hover:text-white'
+                          }`}
+                        >
+                          Pricing Plans
+                        </button>
+                        <button
+                          onClick={() => setMembershipView('comparison')}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            membershipView === 'comparison'
+                              ? 'bg-gradient-to-r from-[#FFB703] to-[#FF8C00] text-[#120B05] shadow-md'
+                              : 'text-white/60 hover:text-white'
+                          }`}
+                        >
+                          Compare Features
+                        </button>
+                      </div>
                     </div>
+
+                    {/* View 1: Pricing Cards */}
+                    {membershipView === 'cards' ? (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {MEMBERSHIP_PACKAGES.map((pkg) => {
+                          const isPopular = pkg.popular;
+                          const calculatedPrice = billingCycle === 'annual' && pkg.id !== 'pro_plus_plan'
+                            ? Math.round(pkg.priceINR * 0.8)
+                            : pkg.priceINR;
+
+                          return (
+                            <div
+                              key={pkg.id}
+                              className={`relative rounded-3xl p-5 flex flex-col justify-between transition-all duration-200 ${
+                                isPopular
+                                  ? 'bg-gradient-to-b from-[#3D2A10] via-[#211608] to-[#141619] border-2 border-[#FFB703] shadow-[0_0_30px_rgba(255,183,3,0.3)] scale-[1.02]'
+                                  : 'bg-gradient-to-b from-[#1E2126] via-[#16181B] to-[#121417] border border-white/10 hover:border-white/20'
+                              }`}
+                            >
+                              {/* Popular / Special Badge */}
+                              {isPopular ? (
+                                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-gradient-to-r from-[#FFB703] to-[#FF8C00] text-[#120B05] shadow-md">
+                                  MOST POPULAR
+                                </div>
+                              ) : pkg.badge ? (
+                                <div className="absolute -top-3 right-4 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-[#2C1F0D] border border-[#FFB703]/50 text-[#FFC300]">
+                                  {pkg.badge}
+                                </div>
+                              ) : null}
+
+                              <div>
+                                <h3 className="font-headline text-lg font-black text-white">{pkg.name}</h3>
+                                <p className="text-xs text-white/50 mt-1">
+                                  {pkg.id === 'plus_plan' && 'Essential tools for advancing chess players'}
+                                  {pkg.id === 'pro_plan' && 'Full grandmaster suite & priority matchmaking'}
+                                  {pkg.id === 'pro_plus_plan' && 'Lifetime access to all current & future features'}
+                                </p>
+
+                                {/* Price Display */}
+                                <div className="my-4 pb-4 border-b border-white/10">
+                                  <div className="flex items-baseline gap-1.5">
+                                    <span className="font-headline text-3xl font-black text-[#FFC300]">
+                                      ₹{calculatedPrice}
+                                    </span>
+                                    <span className="text-xs text-white/60 font-semibold">
+                                      {pkg.period}
+                                    </span>
+                                  </div>
+                                  {pkg.originalPriceINR && (
+                                    <div className="text-[11px] text-white/40 mt-1">
+                                      Regular <span className="line-through">₹{pkg.originalPriceINR}</span> • Instant Delivery
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Features List */}
+                                <ul className="space-y-2.5 my-4 text-xs text-[#E0C8A0]">
+                                  {pkg.features.map((feature, i) => (
+                                    <li key={i} className="flex items-start gap-2">
+                                      <span className="material-symbols-outlined text-sm text-[#FFC300] shrink-0 mt-0.5">
+                                        check_circle
+                                      </span>
+                                      <span className="text-white/90">{feature}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+
+                              <button
+                                onClick={() => handleInitiatePayU({
+                                  ...pkg,
+                                  priceINR: calculatedPrice
+                                })}
+                                className={`w-full py-3 rounded-2xl font-black text-xs uppercase tracking-wider shadow-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 mt-4 ${
+                                  isPopular
+                                    ? 'bg-gradient-to-r from-[#FFB703] to-[#FF8C00] text-[#120B05] hover:brightness-110 active:scale-95'
+                                    : 'bg-white/10 hover:bg-white/20 text-white border border-white/10'
+                                }`}
+                              >
+                                <span>Get {pkg.name} (₹{calculatedPrice})</span>
+                                <span className="material-symbols-outlined text-base">arrow_forward</span>
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      /* View 2: Feature Comparison Table */
+                      <div className="overflow-x-auto rounded-2xl border border-white/10 bg-[#1A1D21] p-2 sm:p-4">
+                        <table className="w-full text-left border-collapse text-xs">
+                          <thead>
+                            <tr className="border-b border-white/10">
+                              <th className="py-3 px-3 text-white/60 uppercase font-bold text-[10px]">Feature Overview</th>
+                              <th className="py-3 px-3 text-center font-black text-white text-sm">Plus (₹10)</th>
+                              <th className="py-3 px-3 text-center font-black text-[#FFC300] text-sm">Pro (₹100)</th>
+                              <th className="py-3 px-3 text-center font-black text-[#81D4FA] text-sm">Pro Plus (₹500)</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-white/5">
+                            {[
+                              { feature: 'Stockfish 16 Engine Analysis', plus: true, pro: true, proPlus: true },
+                              { feature: 'Gemini AI Grandmaster Coach', plus: true, pro: true, proPlus: true },
+                              { feature: '100% Ad-Free Experience', plus: true, pro: true, proPlus: true },
+                              { feature: 'Tactical Puzzles & Lessons', plus: 'Basic', pro: 'Unlimited', proPlus: 'Unlimited' },
+                              { feature: 'Priority Matchmaking Queue (0s Wait)', plus: false, pro: true, proPlus: true },
+                              { feature: 'Coins & Gems Reward Drop', plus: '200 Coins', pro: '1,000 Coins', proPlus: '5,000 Coins' },
+                              { feature: 'Custom Board & Piece Skins', plus: false, pro: '3D Skins', proPlus: 'All Unlocked' },
+                              { feature: 'Season 1 Battle Pass', plus: false, pro: '50% Off', proPlus: 'Included Free' },
+                              { feature: 'VIP Profile Badge', plus: 'Plus Badge', pro: 'Pro Badge', proPlus: 'Pro Plus Crown' },
+                            ].map((row, idx) => (
+                              <tr key={idx} className="hover:bg-white/5 transition-colors">
+                                <td className="py-3 px-3 text-white/80 font-medium">{row.feature}</td>
+                                {[row.plus, row.pro, row.proPlus].map((val, colIdx) => (
+                                  <td key={colIdx} className="py-3 px-3 text-center">
+                                    {typeof val === 'boolean' ? (
+                                      val ? (
+                                        <span className="material-symbols-outlined text-green-400 text-base">check</span>
+                                      ) : (
+                                        <span className="material-symbols-outlined text-white/20 text-base">close</span>
+                                      )
+                                    ) : (
+                                      <span className="font-bold text-white/90">{val}</span>
+                                    )}
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -611,7 +868,7 @@ export const PayUPremiumModal: React.FC<PayUPremiumModalProps> = ({
                   <div className="space-y-3">
                     {myTransactions.length === 0 ? (
                       <div className="text-center py-8 text-white/50 text-xs">
-                        No previous PayU transactions found. Complete a purchase above to generate GST invoices.
+                        No previous transactions found. Complete a purchase above to generate GST invoices.
                       </div>
                     ) : (
                       myTransactions.map((tx, idx) => (
@@ -693,61 +950,53 @@ export const PayUPremiumModal: React.FC<PayUPremiumModalProps> = ({
                   </p>
                 )}
 
-                {/* Payment Methods */}
-                <div>
-                  <label className="text-[11px] font-bold text-white/80 uppercase block mb-1.5">
-                    Select PayU India Payment Method
+
+
+                {/* Instant UPI Apps Options */}
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-white/80 uppercase block">
+                    Instant UPI Payment Apps
                   </label>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     {[
-                      { id: 'upi', label: 'UPI QR / GPay / Paytm', icon: 'qr_code_scanner' },
-                      { id: 'card', label: 'Debit / Credit Card', icon: 'credit_card' },
-                      { id: 'netbanking', label: 'Net Banking', icon: 'account_balance' },
-                      { id: 'wallet', label: 'PayU Wallet', icon: 'account_balance_wallet' },
-                    ].map((m) => (
+                      { name: 'Google Pay', icon: 'account_balance_wallet', scheme: 'gpay', color: 'from-[#4285F4]/20 to-[#34A853]/20 border-[#4285F4]/50 text-[#66A3FF]' },
+                      { name: 'PhonePe', icon: 'smartphone', scheme: 'phonepe', color: 'from-[#5F259F]/20 to-[#A051FA]/20 border-[#9D54F2]/50 text-[#C182FF]' },
+                      { name: 'Paytm', icon: 'account_balance', scheme: 'paytm', color: 'from-[#002E6E]/20 to-[#00B9F1]/20 border-[#00B9F1]/50 text-[#38D2FF]' },
+                      { name: 'BHIM / Any UPI', icon: 'qr_code_scanner', scheme: '', color: 'from-[#FFB703]/20 to-[#FF8C00]/20 border-[#FFB703]/50 text-[#FFC300]' },
+                    ].map((app) => (
                       <button
-                        key={m.id}
-                        onClick={() => setPayuMethod(m.id as any)}
-                        className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col items-center justify-center gap-1 ${
-                          payuMethod === m.id
-                            ? 'border-[#FFB703] bg-[#2C1F0D] text-[#FFC300]'
-                            : 'border-white/10 bg-[#1A1D21] text-white/60 hover:text-white'
-                        }`}
+                        key={app.name}
+                        onClick={() => payViaUpiApp(app.name, app.scheme)}
+                        className={`p-2.5 rounded-xl border bg-gradient-to-br ${app.color} transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer flex flex-col items-center justify-center gap-1 shadow-md`}
                       >
-                        <span className="material-symbols-outlined text-xl">{m.icon}</span>
-                        <span className="text-[10px] font-bold text-center">{m.label}</span>
+                        <span className="material-symbols-outlined text-xl">{app.icon}</span>
+                        <span className="text-[10px] font-black text-white">{app.name}</span>
                       </button>
                     ))}
                   </div>
                 </div>
 
-                {payuMethod === 'card' && (
-                  <div className="space-y-2 p-3 rounded-xl bg-[#1A1D21] border border-white/10">
+                {/* Pay via UPI VPA / ID */}
+                <div className="p-3 rounded-2xl bg-[#1A1D21] border border-white/10 space-y-2">
+                  <label className="text-[11px] font-bold text-white/80 uppercase block">
+                    Pay via UPI VPA / ID
+                  </label>
+                  <div className="flex gap-2">
                     <input
                       type="text"
-                      placeholder="Card Number"
-                      value={cardNumber}
-                      onChange={(e) => setCardNumber(e.target.value)}
-                      className="w-full px-3 py-2 rounded-lg bg-[#141619] border border-white/20 text-white text-xs"
+                      placeholder="e.g. username@paytm or 9876543210@ybl"
+                      value={upiId}
+                      onChange={(e) => setUpiId(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-[#141619] border border-white/20 text-white text-xs focus:outline-none focus:border-[#FFB703]"
                     />
-                    <div className="grid grid-cols-2 gap-2">
-                      <input
-                        type="text"
-                        placeholder="MM/YY"
-                        value={cardExpiry}
-                        onChange={(e) => setCardExpiry(e.target.value)}
-                        className="w-full px-3 py-2 rounded-lg bg-[#141619] border border-white/20 text-white text-xs"
-                      />
-                      <input
-                        type="password"
-                        placeholder="CVV"
-                        value={cardCvv}
-                        onChange={(e) => setCardCvv(e.target.value)}
-                        className="w-full px-3 py-2 rounded-lg bg-[#141619] border border-white/20 text-white text-xs"
-                      />
-                    </div>
+                    <button
+                      onClick={() => payViaUpiApp('UPI ID')}
+                      className="px-4 py-2 rounded-xl bg-[#FFB703] text-[#120B05] font-black text-xs hover:brightness-110 cursor-pointer shrink-0"
+                    >
+                      Collect Request
+                    </button>
                   </div>
-                )}
+                </div>
 
                 {errorMsg && (
                   <div className="p-2.5 rounded-lg bg-red-500/20 border border-red-500/50 text-red-300 text-xs">
@@ -755,58 +1004,74 @@ export const PayUPremiumModal: React.FC<PayUPremiumModalProps> = ({
                   </div>
                 )}
 
-                {/* Direct PayU Link Box */}
-                <div className="p-3.5 rounded-2xl bg-[#141619] border border-[#FFB703]/30 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-black text-[#FFC300] uppercase tracking-wider flex items-center gap-1.5">
-                      <span className="material-symbols-outlined text-sm">link</span>
-                      Official PayU Direct Payment Link:
-                    </span>
-                    <button
-                      onClick={copyPayULinkToClipboard}
-                      className="text-[10px] text-white/80 hover:text-white bg-white/10 px-2 py-0.5 rounded font-bold cursor-pointer transition-colors"
-                    >
-                      {copiedPayuLink ? 'Copied!' : 'Copy Link'}
-                    </button>
+                {/* Direct PayU Link Box with Requested HTML Button */}
+                <div className="p-4 rounded-2xl bg-[#141619] border border-[#FFB703]/30 space-y-3 text-center">
+                  <div className="text-xs text-white/80 font-bold">
+                    Official Secure Checkout for <span className="text-[#FFC300]">₹{currentPrice} INR</span> ({selectedPackage.name} Plan)
                   </div>
-                  <div className="flex items-center justify-between bg-[#1A1D21] p-2.5 rounded-xl border border-white/10 text-xs font-mono text-white/90">
-                    <span className="truncate">{PAYU_DIRECT_LINK}</span>
-                    <button
-                      onClick={openDirectPayULink}
-                      className="ml-2 px-2.5 py-1 rounded-lg bg-[#FFB703] text-[#120B05] font-black text-[10px] uppercase shrink-0 cursor-pointer hover:brightness-110"
+                  
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 my-2">
+                    <a
+                      style={{
+                        width: '180px',
+                        backgroundColor: '#1065b7',
+                        textAlign: 'center',
+                        fontWeight: 800,
+                        padding: '11px 0px',
+                        color: 'white',
+                        fontSize: '12px',
+                        display: 'inline-block',
+                        textDecoration: 'none',
+                        borderRadius: '3.229px',
+                        boxShadow: '0 4px 12px rgba(16, 101, 183, 0.4)'
+                      }}
+                      href={PAYU_DIRECT_LINK}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => {
+                        setTimeout(() => {
+                          setQrTimerSeconds(299);
+                          setPaymentStep('qr_scan');
+                        }, 500);
+                      }}
                     >
-                      Open Link
-                    </button>
-                  </div>
-                </div>
+                      Pay Now
+                    </a>
 
-                <div className="flex flex-col gap-2 pt-2">
-                  <button
-                    onClick={() => redirectToPayUHostedCheckout(selectedPackage)}
-                    className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#FFB703] via-[#FFA000] to-[#FF8C00] text-[#120B05] font-black text-xs uppercase tracking-wider shadow-lg hover:brightness-110 active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center gap-2"
-                  >
-                    <span className="material-symbols-outlined text-lg">open_in_new</span>
-                    <span>Pay ₹{currentPrice} via PayU Link (u.payu.in)</span>
-                  </button>
-
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setPaymentStep('shop')}
-                      className="w-1/3 py-2.5 rounded-xl bg-white/10 text-white font-bold text-xs cursor-pointer hover:bg-white/15"
-                    >
-                      Back to Store
-                    </button>
                     <button
                       onClick={() => {
                         setQrTimerSeconds(299);
                         setPaymentStep('qr_scan');
                       }}
-                      className="w-2/3 py-2.5 rounded-xl bg-[#2C1F0D] border border-[#FFB703]/50 text-[#FFC300] font-bold text-xs hover:bg-[#3d2c14] cursor-pointer flex items-center justify-center gap-1.5"
+                      className="px-4 py-2.5 rounded-lg bg-[#FFB703] text-[#120B05] font-black text-xs uppercase tracking-wider hover:brightness-110 cursor-pointer shadow-md flex items-center justify-center gap-1.5"
                     >
                       <span className="material-symbols-outlined text-base">qr_code_2</span>
-                      <span>Pay via In-App UPI QR Code</span>
+                      <span>Pay via Instant UPI / QR</span>
                     </button>
                   </div>
+
+                  <p className="text-[10px] text-white/50">
+                    If PayU page shows unavailable, use Instant UPI / QR Code option above to pay directly via GPay, PhonePe, Paytm or BHIM.
+                  </p>
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <button
+                    onClick={() => setPaymentStep('shop')}
+                    className="w-1/2 py-2.5 rounded-xl bg-white/10 text-white font-bold text-xs cursor-pointer hover:bg-white/15"
+                  >
+                    Back to Store
+                  </button>
+                  <button
+                    onClick={() => {
+                      setQrTimerSeconds(299);
+                      setPaymentStep('qr_scan');
+                    }}
+                    className="w-1/2 py-2.5 rounded-xl bg-[#2C1F0D] border border-[#FFB703]/50 text-[#FFC300] font-bold text-xs hover:bg-[#3d2c14] cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <span className="material-symbols-outlined text-base">qr_code_2</span>
+                    <span>In-App QR Code</span>
+                  </button>
                 </div>
               </div>
             )}
@@ -834,9 +1099,9 @@ export const PayUPremiumModal: React.FC<PayUPremiumModalProps> = ({
                   <div className="relative p-3 bg-white rounded-2xl shadow-[0_0_25px_rgba(255,183,3,0.3)] shrink-0 flex flex-col items-center">
                     <img
                       src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(
-                        `upi://pay?pa=payu.chessmaster@icici&pn=ChessMaster&am=${currentPrice}&cu=INR`
+                        `upi://pay?pa=vp4647115-3@okaxis&pn=ChessMaster&am=${currentPrice}&cu=INR`
                       )}`}
-                      alt="PayU Official UPI QR Code"
+                      alt="Verified UPI QR Code"
                       className="w-40 h-40 rounded-lg object-contain"
                     />
                     <div className="mt-2 text-[9px] font-black text-[#120B05] uppercase tracking-wider bg-[#FFB703] px-2 py-0.5 rounded">
@@ -879,10 +1144,101 @@ export const PayUPremiumModal: React.FC<PayUPremiumModalProps> = ({
                       </button>
                     </div>
 
-                    {/* UTR Input Field */}
+                    {/* Step 2: Upload Payment Screenshot for AI Scan */}
+                    <div className="pt-2 border-t border-white/10 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[11px] font-bold text-[#FFC300] uppercase tracking-wide flex items-center gap-1">
+                          <span className="material-symbols-outlined text-sm">center_focus_strong</span>
+                          <span>Step 2: Upload Payment Screenshot (AI OCR Scan)</span>
+                        </label>
+                        <span className="text-[9px] text-[#29B6F6] font-bold uppercase bg-[#0D2438] px-2 py-0.5 rounded">
+                          AUTO VERIFICATION
+                        </span>
+                      </div>
+
+                      {/* Dropzone / Upload Box */}
+                      {!screenshotPreview ? (
+                        <label className="relative flex flex-col items-center justify-center p-4 rounded-2xl bg-[#141619] border-2 border-dashed border-[#FFB703]/40 hover:border-[#FFB703] cursor-pointer transition-all hover:bg-white/5 group">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleScreenshotChange}
+                            className="hidden"
+                          />
+                          <div className="w-10 h-10 rounded-full bg-[#FFB703]/10 text-[#FFC300] flex items-center justify-center mb-1 group-hover:scale-110 transition-transform">
+                            <span className="material-symbols-outlined text-xl">add_photo_alternate</span>
+                          </div>
+                          <p className="text-xs font-bold text-white group-hover:text-[#FFC300]">
+                            Upload Google Pay / PhonePe / Paytm Screenshot
+                          </p>
+                          <p className="text-[10px] text-white/50 mt-0.5">
+                            Click or drag payment receipt image (PNG, JPG, WEBP)
+                          </p>
+                        </label>
+                      ) : (
+                        /* Image Preview + Scan Button */
+                        <div className="relative p-3 rounded-2xl bg-[#141619] border border-[#FFB703]/50 flex flex-col sm:flex-row items-center gap-3">
+                          {/* Image Box with Laser Scan effect during scan */}
+                          <div className="relative w-24 h-24 rounded-xl overflow-hidden border border-white/20 shrink-0 bg-black flex items-center justify-center">
+                            <img
+                              src={screenshotPreview}
+                              alt="Payment Screenshot Preview"
+                              className="w-full h-full object-cover"
+                            />
+                            {isScanningScreenshot && (
+                              <div className="absolute inset-0 bg-[#FFB703]/20 flex flex-col items-center justify-center overflow-hidden">
+                                <div className="w-full h-1 bg-[#FFB703] shadow-[0_0_15px_#FFB703] animate-pulse" />
+                                <span className="text-[9px] font-black text-black bg-[#FFB703] px-1.5 py-0.5 rounded mt-1">
+                                  SCANNING...
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Action Info & Scan Trigger */}
+                          <div className="flex-1 space-y-2 text-center sm:text-left">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-white flex items-center gap-1">
+                                <span className="material-symbols-outlined text-sm text-green-400">image</span>
+                                Screenshot Uploaded
+                              </span>
+                              <button
+                                onClick={() => {
+                                  setScreenshotPreview(null);
+                                  setExtractedReceipt(null);
+                                }}
+                                className="text-[10px] text-red-400 hover:underline cursor-pointer"
+                              >
+                                Remove
+                              </button>
+                            </div>
+
+                            <button
+                              onClick={handleScanAndVerifyScreenshot}
+                              disabled={isScanningScreenshot}
+                              className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#FFB703] to-[#FF8C00] text-[#120B05] font-black text-xs uppercase tracking-wider shadow-md hover:brightness-110 active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                            >
+                              {isScanningScreenshot ? (
+                                <>
+                                  <span className="material-symbols-outlined text-sm animate-spin">sync</span>
+                                  <span>{screenshotScanStatus || 'Scanning Receipt...'}</span>
+                                </>
+                              ) : (
+                                <>
+                                  <span className="material-symbols-outlined text-base">scanner</span>
+                                  <span>Scan & Verify Screenshot Now</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Step 3: UTR Manual Fallback */}
                     <div className="pt-2">
                       <label className="text-[11px] font-bold text-white/80 block mb-1 uppercase">
-                        Step 2: Enter 12-Digit UPI Transaction ID / UTR (Optional)
+                        Step 3: Enter 12-Digit UPI Transaction ID / UTR (Optional)
                       </label>
                       <input
                         type="text"
@@ -910,11 +1266,13 @@ export const PayUPremiumModal: React.FC<PayUPremiumModalProps> = ({
                     Change Method
                   </button>
                   <button
-                    onClick={handleCompletePayment}
+                    onClick={screenshotPreview ? handleScanAndVerifyScreenshot : handleCompletePayment}
                     className="w-2/3 py-3 rounded-xl bg-gradient-to-r from-[#FFB703] to-[#FF8C00] text-[#120B05] font-black text-xs uppercase tracking-wider shadow-lg hover:brightness-110 cursor-pointer flex items-center justify-center gap-2"
                   >
                     <span className="material-symbols-outlined text-lg">verified</span>
-                    <span>I Have Paid — Verify Payment & Unlock</span>
+                    <span>
+                      {screenshotPreview ? 'Verify Screenshot & Unlock' : 'I Have Paid — Verify & Unlock'}
+                    </span>
                   </button>
                 </div>
               </div>
@@ -941,21 +1299,45 @@ export const PayUPremiumModal: React.FC<PayUPremiumModalProps> = ({
 
             {paymentStep === 'success' && (
               <div className="py-6 text-center space-y-4">
-                <div className="w-16 h-16 rounded-full bg-[#FFB703]/20 border-2 border-[#FFB703] flex items-center justify-center text-[#FFC300] mx-auto">
-                  <span className="material-symbols-outlined text-3xl">stars</span>
+                <div className="w-16 h-16 rounded-full bg-[#FFB703]/20 border-2 border-[#FFB703] flex items-center justify-center text-[#FFC300] mx-auto shadow-[0_0_20px_rgba(255,183,3,0.3)]">
+                  <span className="material-symbols-outlined text-3xl">verified</span>
                 </div>
                 <div>
-                  <h3 className="font-headline text-xl font-black text-[#FFFDF7]">PAYMENT SUCCESSFUL!</h3>
-                  <p className="text-xs text-[#E0C8A0]">
-                    Your PayU payment of ₹{currentPrice} INR was processed & items unlocked!
+                  <h3 className="font-headline text-xl font-black text-[#FFFDF7]">PAYMENT VERIFIED & UNLOCKED!</h3>
+                  <p className="text-xs text-[#E0C8A0] mt-1">
+                    Your payment of ₹{currentPrice} INR was processed & {selectedPackage.name} benefits were applied!
                   </p>
                 </div>
+
+                {extractedReceipt && (
+                  <div className="max-w-sm mx-auto p-3 rounded-2xl bg-[#1A1D21] border border-green-500/30 space-y-1.5 text-left text-xs">
+                    <div className="text-[10px] font-black uppercase text-green-400 tracking-wider flex items-center justify-between">
+                      <span>Receipt Verification Details</span>
+                      <span className="bg-green-500/20 px-2 py-0.5 rounded">VERIFIED</span>
+                    </div>
+                    <div className="flex justify-between text-white/80">
+                      <span>UPI UTR / Ref No:</span>
+                      <strong className="font-mono text-white">{extractedReceipt.utr}</strong>
+                    </div>
+                    <div className="flex justify-between text-white/80">
+                      <span>Amount Confirmed:</span>
+                      <strong className="text-[#FFC300]">₹{extractedReceipt.amount} INR</strong>
+                    </div>
+                    <div className="flex justify-between text-white/80">
+                      <span>Receiver VPA:</span>
+                      <strong className="text-white/90">{extractedReceipt.receiver || 'vp4647115-3@okaxis'}</strong>
+                    </div>
+                  </div>
+                )}
+
                 <button
                   onClick={() => {
                     setPaymentStep('shop');
+                    setScreenshotPreview(null);
+                    setExtractedReceipt(null);
                     onClose();
                   }}
-                  className="px-6 py-2.5 rounded-xl bg-[#FFB703] text-[#120B05] font-black text-xs uppercase shadow-md cursor-pointer"
+                  className="px-6 py-2.5 rounded-xl bg-[#FFB703] text-[#120B05] font-black text-xs uppercase shadow-md hover:brightness-110 cursor-pointer"
                 >
                   Return to Game
                 </button>
