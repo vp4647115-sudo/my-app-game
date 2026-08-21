@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">VPN Chess</string>
+    <string name="title_activity_main">VPN Chess</string>
+    <string name="package_name">com.vpnchessmaster.app</string>
+    <string name="custom_url_scheme">com.vpnchessmaster.app</string>
+</resources>

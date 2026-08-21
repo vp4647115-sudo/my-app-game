@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <rect width="512" height="512" rx="100" fill="#121411"/>
+  <rect x="16" y="16" width="480" height="480" rx="84" fill="none" stroke="#D4AF37" stroke-width="8" opacity="0.4"/>
+  <path d="M256 96 L320 220 L440 220 L340 290 L380 416 L256 340 L132 416 L172 290 L72 220 L192 220 Z" fill="#D4AF37" opacity="0.15"/>
+  <!-- Crown / King Finial -->
+  <path d="M256 120 L272 160 L312 160 L280 184 L292 224 L256 200 L220 224 L232 184 L200 160 L240 160 Z" fill="#D4AF37"/>
+  <circle cx="256" cy="100" r="14" fill="#D4AF37"/>
+  <!-- Chess Knight / Castle Symbol -->
+  <path d="M176 392 L336 392 L336 360 L312 360 L312 280 L336 250 L336 230 L288 230 L288 250 L256 230 L224 250 L224 230 L176 230 L176 250 L200 280 L200 360 L176 360 Z" fill="#FAF9F6"/>
+  <rect x="156" y="392" width="200" height="24" rx="6" fill="#D4AF37"/>
+</svg>
